@@ -1,5 +1,5 @@
 {
-  "name": "@ixo/signx",
+  "name": "@ixo/signx-sdk",
   "version": "0.0.1",
   "description": "An SDK to manage the login and transaction signing process through Impacts X",
   "author": "ixo",
@@ -24,6 +24,7 @@
     "build:docs": "typedoc src/index.ts",
     "build": "npm run build:module && npm run build:main",
     "build:prepare": "npm run build && npm run build:ts && npm run build:docs",
+    "build:npm": "npm run build:prepare && npm pack",
     "prepare": "npm run build",
     "lint": "eslint src --fix"
   },

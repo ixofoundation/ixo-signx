@@ -1,51 +1,51 @@
-# # This workflow will run tests using node and then publish a package to GitHub Packages when a release is created
-# # For more information see: https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages
+# This workflow will run tests using node and then publish a package to GitHub Packages when a release is created
+# For more information see: https://docs.github.com/en/actions/publishing-packages/publishing-nodejs-packages
 
-# name: Node.js Package
+name: Node.js Package
 
-# on:
-#   push:
-#     branches: [main]
-#   workflow_dispatch:
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
 
-# jobs:
-#   # build:
-#   #   runs-on: ubuntu-latest
-#   #   steps:
-#   #     - uses: actions/checkout@v3
-#   #     - uses: actions/setup-node@v3
-#   #       with:
-#   #         node-version: 18.10.0
-#   # - run: yarn test
+jobs:
+  # build:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - uses: actions/setup-node@v3
+  #       with:
+  #         node-version: 18.10.0
+  # - run: yarn test
 
-#   # versioning:
-#   #   needs: build
-#   #   permissions:
-#   #     contents: write
-#   #   runs-on: ubuntu-latest
-#   #   steps:
-#   #     - uses: actions/checkout@v3
-#   #     - name: "Automated Version Bump"
-#   #       uses: "phips28/gh-action-bump-version@master"
-#   #       env:
-#   #         GITHUB_TOKEN: ${{ secrets.GHTOKEN }}
-#   #       with:
-#   #         minor-wording: "MINOR"
-#   #         major-wording: "MAJOR"
-#   #         patch-wording: "patch,fix" # Providing patch-wording will override commits defaulting to a patch bump.
-#   #         rc-wording: "RELEASE,alpha"
+  # versioning:
+  #   needs: build
+  #   permissions:
+  #     contents: write
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: "Automated Version Bump"
+  #       uses: "phips28/gh-action-bump-version@master"
+  #       env:
+  #         GITHUB_TOKEN: ${{ secrets.GHTOKEN }}
+  #       with:
+  #         minor-wording: "MINOR"
+  #         major-wording: "MAJOR"
+  #         patch-wording: "patch,fix" # Providing patch-wording will override commits defaulting to a patch bump.
+  #         rc-wording: "RELEASE,alpha"
 
-#   publish-npm:
-#     # needs: [build, versioning]
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: actions/checkout@v3
-#       - uses: actions/setup-node@v3
-#         with:
-#           node-version: 18.10.0
-#           registry-url: https://registry.npmjs.org/
-#       - run: yarn install --frozen-lockfile
-#       - run: yarn build
-#       - run: yarn publish --access public
-#         env:
-#           NODE_AUTH_TOKEN: ${{secrets.npm_token}}
+  publish-npm:
+    # needs: [build, versioning]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18.10.0
+          registry-url: https://registry.npmjs.org/
+      - run: yarn install --frozen-lockfile
+      - run: yarn build
+      - run: yarn publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.npm_token}}

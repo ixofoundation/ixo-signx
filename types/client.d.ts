@@ -1,29 +1,39 @@
 /// <reference types="node" />
 import { EventEmitter } from 'events';
 import { NETWORK, TRANSACT_DTO } from './types/transact';
-declare class SignX extends EventEmitter {
+export declare class SignX extends EventEmitter {
     timeout: number;
-    private endpoint;
-    private sitename;
-    private network;
+    pollingInterval: number;
+    network: NETWORK;
+    endpoint: string;
+    sitename: string;
     private pollingTimeout;
-    constructor(endpoint: string, sitename: string, network: NETWORK);
+    constructor(p: {
+        endpoint: string;
+        sitename: string;
+        network: NETWORK;
+        timeout?: number;
+        pollingInterval?: number;
+    });
     private generateRandomHash;
-    login(): Promise<{
+    login(p: {
+        pollingInterval?: number;
+    }): Promise<{
         hash: string;
         secureHash: string;
         type: string;
         sitename: string;
-        timestamp: number;
+        timeout: string;
         network: NETWORK;
+        version: number;
     }>;
     transact(data: TRANSACT_DTO): Promise<{
         hash: string;
         type: string;
         sitename: string;
         network: NETWORK;
+        version: number;
     }>;
     private startPolling;
-    private stopPolling;
+    stopPolling(errorMessage?: string, failEvent?: string): void;
 }
-export default SignX;
