@@ -33,6 +33,8 @@ Post the QR code generation, the SDK re-engages its polling mechanism, constantl
 
 Through this orchestrated flow, the SignX SDK abstracts the technical intricacies, providing a straightforward and secure way for client applications to leverage mobile-to-web authentication and transaction signing on the IXO blockchain.
 
+The SDK is crafted to interact harmoniously with a designated server, which handles the storage and provides the necessary endpoints for polling data during the authentication and transaction processes. To fully leverage the SDK's capabilities and ensure a streamlined operation, it is essential to set up and utilize the accompanying server, the source code for which can be found [here](https://github.com/ixofoundation/ixo-message-relayer).
+
 ## 🔨 Install
 
 ```sh
