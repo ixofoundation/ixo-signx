@@ -31,15 +31,15 @@ export const convertDataToDeeplink = (data: Types.LOGIN_DATA | Types.TRANSACT_DA
 				loginData.hash +
 				'&secureHash=' +
 				loginData.secureHash +
-				'type=' +
+				'&type=' +
 				loginData.type +
-				'sitename=' +
+				'&sitename=' +
 				loginData.sitename +
-				'timeout=' +
+				'&timeout=' +
 				loginData.timeout +
-				'network=' +
+				'&network=' +
 				loginData.network +
-				'version=' +
+				'&version=' +
 				loginData.version
 			);
 		case Constants.SIGN_X_TRANSACT:
@@ -48,13 +48,13 @@ export const convertDataToDeeplink = (data: Types.LOGIN_DATA | Types.TRANSACT_DA
 				scheme +
 				'://signx?hash=' +
 				transactData.hash +
-				'type=' +
+				'&type=' +
 				transactData.type +
-				'sitename=' +
+				'&sitename=' +
 				transactData.sitename +
-				'network=' +
+				'&network=' +
 				transactData.network +
-				'version=' +
+				'&version=' +
 				transactData.version
 			);
 		default:
