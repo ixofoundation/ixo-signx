@@ -125,6 +125,17 @@ Generates a secure hash from a given hash and nonce:
 const secureHash = generateSecureHash(hash, nonce);
 ```
 
+### convertDataToDeeplink
+
+Generates a deeplink uri that contains all the data fields as uri parameters, ready for the ImpactsX App to use.
+You can change the schema if you want to use another app, ImpactsX App scheme is `impactsx` and that is the default.
+The ImpactsX App can handle the SignX deeplinks, menaing if it is opened on mobile it will open the app if installed, parse the parameters, and run the neccesary function, same as if the data was scanned from within the ImpactsX App. Most mobile devices can also reading and opening deeplink uri's from the devices native camera, that means you can also use the deplink in the qr code for the users to scan as they can then scan the qr code either from within the ImpactsX app or using the devices native camera and it will open the app.
+
+```js
+// convertDataToDeeplink(data: Types.LOGIN_DATA | Types.TRANSACT_DATA, scheme = 'impactsx'): string
+const deeplinkUri = convertDataToDeeplink(data); // data is the object returned from transact or login methods
+```
+
 ## 🖇️ API Reference
 
 ### Types
