@@ -8,12 +8,16 @@ export type LOGIN_DATA = {
     network: NETWORK;
     version: number;
 };
+export type TRANSACTION = {
+    txBodyHex: string;
+    sequence: number;
+};
 export type TRANSACT_DTO = {
     address: string;
     did: string;
     pubkey: string;
-    txBodyHex: string;
     timestamp: string;
+    transactions: TRANSACTION[];
 };
 export type TRANSACT_DATA = {
     hash: string;
@@ -21,4 +25,14 @@ export type TRANSACT_DATA = {
     sitename: string;
     network: NETWORK;
     version: number;
+};
+export type TRANSACT_ADDITION_DATA = {
+    showQR: boolean;
+};
+export type TRANSACT_HASH = {
+    address: string;
+    did: string;
+    pubkey: string;
+    timestamp: string;
+    txBodyHex: string;
 };

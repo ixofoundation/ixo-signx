@@ -4,4 +4,17 @@ export declare const SIGN_X_LOGIN_ERROR = "SIGN_X_LOGIN_ERROR";
 export declare const SIGN_X_TRANSACT = "SIGN_X_TRANSACT";
 export declare const SIGN_X_TRANSACT_SUCCESS = "SIGN_X_TRANSACT_SUCCESS";
 export declare const SIGN_X_TRANSACT_ERROR = "SIGN_X_TRANSACT_ERROR";
-export declare const VERSION = 1;
+export declare const SIGN_X_TRANSACT_SESSION_NEW_TRANSACTION = "SIGN_X_TRANSACT_SESSION_NEW_TRANSACTION";
+export declare const SIGN_X_TRANSACT_SESSION_ENDED = "SIGN_X_TRANSACT_SESSION_ENDED";
+export declare const VERSION = 2;
+export declare const ROUTES: {
+    login: {
+        fetch: string;
+    };
+    transact: {
+        create: string;
+        add: string;
+        response: string;
+        next: string;
+    };
+};
