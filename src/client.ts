@@ -92,6 +92,10 @@ export class SignX extends EventEmitter {
 
 		// if no session hash, means no active session, generate new secure nonce and session hash
 		if (!this.transactSessionHash || forceNewSession) {
+			// if session hash exists, first stop current polling
+			if (this.transactSessionHash) {
+				this.stopPolling();
+			}
 			this.transactSecureNonce = this.generateRandomHash();
 			this.transactSessionHash = Encoding.generateSecureHash(transactions[0].hash, this.transactSecureNonce);
 
@@ -110,6 +114,8 @@ export class SignX extends EventEmitter {
 			if (!res.data.success) throw new Error(res.data.data?.message || 'Transaction creation failed');
 			const activeTrxHash = res.data.data?.activeTransaction?.hash;
 
+			// emit session started event
+			this.emit(Constants.SIGN_X_TRANSACT_SESSION_STARTED, res.data.data);
 			// start polling for transaction response
 			this.pollTransactionResponse(activeTrxHash);
 
@@ -193,6 +199,8 @@ export class SignX extends EventEmitter {
 
 					if (isTransactionResponse) {
 						if (response.data.data?.activeTransaction?.hash) {
+							// if next trx is already in current active trx response, emit new transaction event
+							this.emit(Constants.SIGN_X_TRANSACT_SESSION_NEW_TRANSACTION, response.data.data);
 							this.pollTransactionResponse(response.data.data.activeTransaction.hash);
 						} else {
 							this.pollNextTransaction();
