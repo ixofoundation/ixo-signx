@@ -8,7 +8,7 @@ export declare class SignX extends EventEmitter {
     endpoint: string;
     sitename: string;
     private pollingTimeout;
-    private transactSessionHash;
+    transactSessionHash: string | null;
     private transactSecureNonce;
     constructor(p: {
         endpoint: string;

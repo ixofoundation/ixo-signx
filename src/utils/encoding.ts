@@ -6,14 +6,34 @@ import * as Constants from '../constants/signx';
 /**
  * Generate a sha256 hex encoded hash from the provided data in a fixed format
  * @param data - transaction data to generate hash for (type TRANSACT_HASH)
+ * @param fixedSort - whether to sort the keys in the data before hashing (default: true), keep false for backwards compatibility
  */
-export const hashTransactData = (data: Types.TRANSACT_HASH): string => {
+export const hashTransactData = (data: Types.TRANSACT_HASH, fixedSort = true): string => {
 	const formattedData = {
 		address: data.address,
 		did: data.did,
 		pubkey: data.pubkey,
 		txBodyHex: data.txBodyHex,
-		timestamp: data.timestamp.toString(), // Ensuring timestamp is a string
+		timestamp: data.timestamp,
+	};
+
+	// Sort the keys to ensure consistent ordering for the hash
+	const sortedFormattedData = JSON.stringify(formattedData, fixedSort ? Object.keys(formattedData).sort() : null);
+
+	return crypto.createHash('sha256').update(sortedFormattedData).digest('hex');
+};
+
+/**
+ * Generate a sha256 hex encoded hash from the provided data in a fixed format
+ * @param data - transaction data to generate hash for (type TRANSACT_HASH)
+ */
+export const hashTransactDataV2 = (data: Types.TRANSACT_HASH): string => {
+	const formattedData = {
+		address: data.address,
+		did: data.did,
+		pubkey: data.pubkey,
+		txBodyHex: data.txBodyHex,
+		timestamp: data.timestamp,
 	};
 
 	// Sort the keys to ensure consistent ordering for the hash
@@ -63,6 +83,8 @@ export const convertDataToDeeplink = (data: Types.LOGIN_DATA | Types.TRANSACT_DA
 		case Constants.SIGN_X_TRANSACT:
 			const transactData = data as Types.TRANSACT_DATA;
 			return scheme + '://signx?hash=' + transactData.hash + '&type=' + transactData.type + '&sitename=' + transactData.sitename + '&network=' + transactData.network + '&version=' + transactData.version;
+		case Constants.SIGN_X_CLEAN_DEEPLINK:
+			return scheme + '://signx';
 		default:
 			throw new Error('Unable to convert data to deeplink - invalid data type');
 	}

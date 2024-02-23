@@ -14,9 +14,9 @@ export class SignX extends EventEmitter {
 	public network: Types.NETWORK;
 	public endpoint: string;
 	public sitename: string;
-
 	private pollingTimeout: NodeJS.Timeout | null = null;
-	private transactSessionHash: string | null = null;
+
+	public transactSessionHash: string | null = null;
 	private transactSecureNonce: string | null = null;
 
 	constructor(p: { endpoint: string; sitename: string; network: Types.NETWORK; timeout?: number; pollingInterval?: number }) {
@@ -89,56 +89,57 @@ export class SignX extends EventEmitter {
 				timestamp: data.timestamp,
 				sequence: index + 1,
 			}));
+		console.dir(transactions, { depth: null });
 
-		// if no session hash, means no active session, generate new secure nonce and session hash
-		if (!this.transactSessionHash || forceNewSession) {
-			// if session hash exists, first stop current polling
-			if (this.transactSessionHash) {
-				this.stopPolling();
-			}
-			this.transactSecureNonce = this.generateRandomHash();
-			this.transactSessionHash = Encoding.generateSecureHash(transactions[0].hash, this.transactSecureNonce);
-
-			const res = await axios.post(this.endpoint + Constants.ROUTES.transact.create, {
-				hash: this.transactSessionHash,
-				address: data.address,
-				did: data.did,
-				pubkey: data.pubkey,
-				transactions: {
-					hash: this.transactSessionHash,
-					secureNonce: this.transactSecureNonce,
-					transactions,
-				},
-			});
-
-			if (!res.data.success) throw new Error(res.data.data?.message || 'Transaction creation failed');
-			const activeTrxHash = res.data.data?.activeTransaction?.hash;
-
-			// emit session started event
-			this.emit(Constants.SIGN_X_TRANSACT_SESSION_STARTED, res.data.data);
-			// start polling for transaction response
-			this.pollTransactionResponse(activeTrxHash);
-
-			// return transact data for client to generate deeplink/QR code
-			return {
-				hash: this.transactSessionHash,
-				type: Constants.SIGN_X_TRANSACT,
-				sitename: this.sitename,
-				network: this.network,
-				version: Constants.TRANSACT_VERSION,
-			};
-		} else {
-			// otherwise session exists, add new transactions to existing session
+		// if session hash exists and not forcing new session, just add new transactions to existing session
+		if (this.transactSessionHash && !forceNewSession) {
 			const res = await axios.post(this.endpoint + Constants.ROUTES.transact.add, {
 				hash: this.transactSessionHash,
 				secureNonce: this.transactSecureNonce,
 				transactions: transactions,
 			});
 
-			if (!res.data.success) throw new Error(res.data.data?.message || 'Transaction addition failed');
+			if (res.data.success) return res.data.data;
 
-			return res.data.data;
+			// if addition fails because session is not found, then force new session, aka continue flow
+			if (res.data.code !== 418) throw new Error(res.data.data?.message || 'Transaction addition failed');
 		}
+
+		// if session hash exists, first stop current polling
+		if (this.transactSessionHash) {
+			this.stopPolling();
+		}
+		this.transactSecureNonce = this.generateRandomHash();
+		this.transactSessionHash = Encoding.generateSecureHash(transactions[0].hash, this.transactSecureNonce);
+
+		const res = await axios.post(this.endpoint + Constants.ROUTES.transact.create, {
+			hash: this.transactSessionHash,
+			address: data.address,
+			did: data.did,
+			pubkey: data.pubkey,
+			transactions: {
+				hash: this.transactSessionHash,
+				secureNonce: this.transactSecureNonce,
+				transactions,
+			},
+		});
+
+		if (!res.data.success) throw new Error(res.data.data?.message || 'Transaction creation failed');
+		const activeTrxHash = res.data.data?.activeTransaction?.hash;
+
+		// emit session started event
+		this.emit(Constants.SIGN_X_TRANSACT_SESSION_STARTED, res.data.data);
+		// start polling for transaction response
+		this.pollTransactionResponse(activeTrxHash);
+
+		// return transact data for client to generate deeplink/QR code
+		return {
+			hash: this.transactSessionHash,
+			type: Constants.SIGN_X_TRANSACT,
+			sitename: this.sitename,
+			network: this.network,
+			version: Constants.TRANSACT_VERSION,
+		};
 	}
 
 	/**

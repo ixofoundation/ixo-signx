@@ -10,7 +10,7 @@ export type LOGIN_DATA = {
 };
 export type TRANSACTION = {
     txBodyHex: string;
-    sequence: number;
+    sequence?: number;
 };
 export type TRANSACT_DTO = {
     address: string;
