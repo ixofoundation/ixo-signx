@@ -15,9 +15,13 @@ export class SignX extends EventEmitter {
 	public endpoint: string;
 	public sitename: string;
 	private pollingTimeout: NodeJS.Timeout | null = null;
+	private pollingTimecheckTimeout: NodeJS.Timeout | null = null;
 
-	public transactSessionHash: string | null = null;
 	private transactSecureNonce: string | null = null;
+	public transactSessionHash: string | null = null;
+	public transactSequence: number = 0;
+
+	private axiosAbortController = new AbortController();
 
 	constructor(p: { endpoint: string; sitename: string; network: Types.NETWORK; timeout?: number; pollingInterval?: number }) {
 		super();
@@ -26,6 +30,8 @@ export class SignX extends EventEmitter {
 		this.network = p.network;
 		if (p.timeout) this.timeout = p.timeout;
 		if (p.pollingInterval) this.pollingInterval = p.pollingInterval;
+		// setup the beforeunload listener for cancelling pending long polling requests
+		this.setupBeforeUnloadListener();
 	}
 
 	/**
@@ -89,7 +95,6 @@ export class SignX extends EventEmitter {
 				timestamp: data.timestamp,
 				sequence: index + 1,
 			}));
-		console.dir(transactions, { depth: null });
 
 		// if session hash exists and not forcing new session, just add new transactions to existing session
 		if (this.transactSessionHash && !forceNewSession) {
@@ -99,9 +104,15 @@ export class SignX extends EventEmitter {
 				transactions: transactions,
 			});
 
-			if (res.data.success) return res.data.data;
+			if (res.data.success) {
+				// if response contains active transaction sequence, update the sequence
+				if (res.data.data?.activeTransaction?.sequence) {
+					this.transactSequence = res.data.data.activeTransaction.sequence;
+				}
+				return res.data.data;
+			}
 
-			// if addition fails because session is not found, then force new session, aka continue flow
+			// if addition fails because session is not found (418), then force new session, aka continue flow,
 			if (res.data.code !== 418) throw new Error(res.data.data?.message || 'Transaction addition failed');
 		}
 
@@ -111,6 +122,7 @@ export class SignX extends EventEmitter {
 		}
 		this.transactSecureNonce = this.generateRandomHash();
 		this.transactSessionHash = Encoding.generateSecureHash(transactions[0].hash, this.transactSecureNonce);
+		this.transactSequence = 1;
 
 		const res = await axios.post(this.endpoint + Constants.ROUTES.transact.create, {
 			hash: this.transactSessionHash,
@@ -134,7 +146,8 @@ export class SignX extends EventEmitter {
 
 		// return transact data for client to generate deeplink/QR code
 		return {
-			hash: this.transactSessionHash,
+			sessionHash: this.transactSessionHash,
+			hash: transactions[0].hash,
 			type: Constants.SIGN_X_TRANSACT,
 			sitename: this.sitename,
 			network: this.network,
@@ -146,14 +159,14 @@ export class SignX extends EventEmitter {
 	 * Poll for the active transaction response
 	 * @param {string} activeTrxHash - hash of the active transaction to start polling for
 	 */
-	private pollTransactionResponse(activeTrxHash: string) {
+	public pollTransactionResponse(activeTrxHash: string) {
 		this.startPolling(Constants.ROUTES.transact.response, { hash: activeTrxHash, secureNonce: this.transactSecureNonce }, Constants.SIGN_X_TRANSACT_SUCCESS, Constants.SIGN_X_TRANSACT_ERROR);
 	}
 
 	/**
-	 * Poll for the next transaction in a session, will also error if session has on server side
+	 * Poll for the next transaction in a session, will also error if session ends on server side
 	 */
-	private pollNextTransaction() {
+	public pollNextTransaction() {
 		this.startPolling(
 			Constants.ROUTES.transact.next,
 			{ hash: this.transactSessionHash, secureNonce: this.transactSecureNonce },
@@ -173,21 +186,30 @@ export class SignX extends EventEmitter {
 	private startPolling(route: string, body: any, successEvent: string, failEvent: string, customPollingInterval?: number): void {
 		const isLogin = route.includes(Constants.ROUTES.login.fetch);
 		const isTransactionResponse = route.includes(Constants.ROUTES.transact.response);
-		const isTransactionNext = route.includes(Constants.ROUTES.transact.add);
-		let pollingTimeElapsed = 0;
+		const isTransactionNext = route.includes(Constants.ROUTES.transact.next);
+		const startTime = Date.now();
+		let finished = false;
 
-		const poll = async () => {
+		// recursive function to check if polling has timed out
+		const pollTimeCheck = async () => {
+			if (finished) {
+				return; // if polling has been stopped, then return
+			}
 			// handle timeout
-			if (pollingTimeElapsed >= this.timeout) {
+			if (Date.now() - startTime > this.timeout) {
 				this.stopPolling();
 				this.emit(failEvent, 'TIMEOUT');
 				return;
 			}
+			this.pollingTimecheckTimeout = setTimeout(pollTimeCheck, 1000);
+		};
 
+		const poll = async () => {
 			try {
-				const response = await axios.post(this.endpoint + route, body);
+				const response = await axios.post(this.endpoint + route, body, { signal: this.axiosAbortController.signal });
 				if (response.data.success) {
 					this.stopPolling(undefined, undefined, false);
+					finished = true;
 					// if response data contains success property, then check and throw error if false
 					if (!(response.data?.data?.success ?? true)) throw new Error(response.data?.data?.data?.message ?? response.data?.data?.message ?? response.data?.data);
 
@@ -202,12 +224,16 @@ export class SignX extends EventEmitter {
 						if (response.data.data?.activeTransaction?.hash) {
 							// if next trx is already in current active trx response, emit new transaction event
 							this.emit(Constants.SIGN_X_TRANSACT_SESSION_NEW_TRANSACTION, response.data.data);
+							this.transactSequence = response.data.data.activeTransaction.sequence;
 							this.pollTransactionResponse(response.data.data.activeTransaction.hash);
 						} else {
 							this.pollNextTransaction();
 						}
 					} else if (isTransactionNext) {
-						this.pollTransactionResponse(response.data.data?.activeTransaction?.hash);
+						if (!response.data.data?.activeTransaction?.hash) throw new Error('No active transaction found');
+
+						this.transactSequence = response.data.data.activeTransaction.sequence;
+						this.pollTransactionResponse(response.data.data.activeTransaction.hash);
 					}
 
 					return;
@@ -216,16 +242,18 @@ export class SignX extends EventEmitter {
 				if (response.data.code !== 418) {
 					throw new Error(response.data.data?.message || 'Polling failed');
 				}
-				pollingTimeElapsed += customPollingInterval || this.pollingInterval;
 				this.pollingTimeout = setTimeout(poll, customPollingInterval || this.pollingInterval);
 			} catch (error) {
+				if (error.code === 'ERR_CANCELED') return;
 				// handle network or other errors
 				this.stopPolling();
+				finished = true;
 				this.emit(failEvent, error);
 			}
 		};
 
 		poll();
+		pollTimeCheck();
 	}
 
 	/**
@@ -239,20 +267,50 @@ export class SignX extends EventEmitter {
 			clearTimeout(this.pollingTimeout);
 			this.pollingTimeout = null;
 		}
+		if (this.pollingTimecheckTimeout) {
+			clearTimeout(this.pollingTimecheckTimeout);
+			this.pollingTimecheckTimeout = null;
+		}
+		if (this.axiosAbortController) {
+			this.axiosAbortController.abort('Polling stopped'); // first cancel the axios request if still in progress
+			this.axiosAbortController = new AbortController(); // then create a new abort controller
+		}
 		if (errorMessage) {
 			this.emit(failEvent, errorMessage);
 		}
 		if (clearTransactSession && this.transactSessionHash) {
 			this.transactSessionHash = null;
 			this.transactSecureNonce = null;
+			this.transactSequence = 0;
 			this.emit(Constants.SIGN_X_TRANSACT_SESSION_ENDED, 'TIMEOUT');
 		}
 	}
 
 	/**
+	 * Setup the window beforeunload listener to abort any pending requests
+	 */
+	setupBeforeUnloadListener() {
+		if (typeof window !== 'undefined') {
+			window.addEventListener('beforeunload', this.abortPendingRequests);
+		}
+	}
+
+	/**
+	 * Abort any pending axios requests when the tab is closing
+	 */
+	abortPendingRequests = () => {
+		if (this.axiosAbortController) {
+			this.axiosAbortController.abort('Tab or window is closing');
+		}
+	};
+
+	/**
 	 * Dispose the SignX instance, stop polling and clear session data
 	 */
 	dispose(): void {
+		if (typeof window !== 'undefined') {
+			window.removeEventListener('beforeunload', this.abortPendingRequests);
+		}
 		this.stopPolling();
 	}
 }

@@ -8,8 +8,11 @@ export declare class SignX extends EventEmitter {
     endpoint: string;
     sitename: string;
     private pollingTimeout;
-    transactSessionHash: string | null;
+    private pollingTimecheckTimeout;
     private transactSecureNonce;
+    transactSessionHash: string | null;
+    transactSequence: number;
+    private axiosAbortController;
     constructor(p: {
         endpoint: string;
         sitename: string;
@@ -41,11 +44,11 @@ export declare class SignX extends EventEmitter {
      * Poll for the active transaction response
      * @param {string} activeTrxHash - hash of the active transaction to start polling for
      */
-    private pollTransactionResponse;
+    pollTransactionResponse(activeTrxHash: string): void;
     /**
-     * Poll for the next transaction in a session, will also error if session has on server side
+     * Poll for the next transaction in a session, will also error if session ends on server side
      */
-    private pollNextTransaction;
+    pollNextTransaction(): void;
     /**
      * Start polling for a response from the server
      * @param {string} route - server route to poll
@@ -62,6 +65,14 @@ export declare class SignX extends EventEmitter {
      * @param {boolean} clearTransactSession - default true, clear transact session hash and secure nonce used for polling
      */
     stopPolling(errorMessage?: string, failEvent?: string, clearTransactSession?: boolean): void;
+    /**
+     * Setup the window beforeunload listener to abort any pending requests
+     */
+    setupBeforeUnloadListener(): void;
+    /**
+     * Abort any pending axios requests when the tab is closing
+     */
+    abortPendingRequests: () => void;
     /**
      * Dispose the SignX instance, stop polling and clear session data
      */

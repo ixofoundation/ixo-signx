@@ -20,6 +20,7 @@ export type TRANSACT_DTO = {
     transactions: TRANSACTION[];
 };
 export type TRANSACT_DATA = {
+    sessionHash?: string;
     hash: string;
     type: string;
     sitename: string;

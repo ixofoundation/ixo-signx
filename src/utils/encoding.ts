@@ -63,7 +63,7 @@ export const convertDataToDeeplink = (data: Types.LOGIN_DATA | Types.TRANSACT_DA
 	switch (data?.type) {
 		case Constants.SIGN_X_LOGIN:
 			const loginData = data as Types.LOGIN_DATA;
-			return (
+			let loginDeeplink =
 				scheme +
 				'://signx?hash=' +
 				loginData.hash +
@@ -78,11 +78,13 @@ export const convertDataToDeeplink = (data: Types.LOGIN_DATA | Types.TRANSACT_DA
 				'&network=' +
 				loginData.network +
 				'&version=' +
-				loginData.version
-			);
+				loginData.version;
+			return loginDeeplink;
 		case Constants.SIGN_X_TRANSACT:
 			const transactData = data as Types.TRANSACT_DATA;
-			return scheme + '://signx?hash=' + transactData.hash + '&type=' + transactData.type + '&sitename=' + transactData.sitename + '&network=' + transactData.network + '&version=' + transactData.version;
+			let transactDeeplink = scheme + '://signx?hash=' + transactData.hash + '&type=' + transactData.type + '&sitename=' + transactData.sitename + '&network=' + transactData.network + '&version=' + transactData.version;
+			if (transactData.sessionHash) transactDeeplink += '&sessionHash=' + transactData.sessionHash;
+			return transactDeeplink;
 		case Constants.SIGN_X_CLEAN_DEEPLINK:
 			return scheme + '://signx';
 		default:
