@@ -140,7 +140,10 @@ export class SignX extends EventEmitter {
 		const activeTrxHash = res.data.data?.activeTransaction?.hash;
 
 		// emit session started event
-		this.emit(Constants.SIGN_X_TRANSACT_SESSION_STARTED, res.data.data);
+		this.emit(Constants.SIGN_X_TRANSACT_SESSION_STARTED, {
+			sessionHash: this.transactSessionHash,
+			activeTransaction: res.data.data?.activeTransaction,
+		});
 		// start polling for transaction response
 		this.pollTransactionResponse(activeTrxHash);
 
@@ -262,7 +265,7 @@ export class SignX extends EventEmitter {
 	 * @param {string} failEvent - event to emit on failure (optional), only used if errorMessage is provided
 	 * @param {boolean} clearTransactSession - default true, clear transact session hash and secure nonce used for polling
 	 */
-	stopPolling(errorMessage?: string, failEvent?: string, clearTransactSession = true): void {
+	public stopPolling(errorMessage?: string, failEvent?: string, clearTransactSession: boolean = true): void {
 		if (this.pollingTimeout) {
 			clearTimeout(this.pollingTimeout);
 			this.pollingTimeout = null;
@@ -289,7 +292,7 @@ export class SignX extends EventEmitter {
 	/**
 	 * Setup the window beforeunload listener to abort any pending requests
 	 */
-	setupBeforeUnloadListener() {
+	private setupBeforeUnloadListener() {
 		if (typeof window !== 'undefined') {
 			window.addEventListener('beforeunload', this.abortPendingRequests);
 		}
@@ -298,7 +301,7 @@ export class SignX extends EventEmitter {
 	/**
 	 * Abort any pending axios requests when the tab is closing
 	 */
-	abortPendingRequests = () => {
+	private abortPendingRequests = () => {
 		if (this.axiosAbortController) {
 			this.axiosAbortController.abort('Tab or window is closing');
 		}
