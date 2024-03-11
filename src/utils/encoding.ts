@@ -3,7 +3,12 @@ import crypto from 'crypto';
 import * as Types from '../types/transact';
 import * as Constants from '../constants/signx';
 
-export const hashTransactData = (data: Types.TRANSACT_DTO): string => {
+/**
+ * Generate a sha256 hex encoded hash from the provided data in a fixed format
+ * @param data - transaction data to generate hash for (type TRANSACT_HASH)
+ * @param fixedSort - whether to sort the keys in the data before hashing (default: true), keep false for backwards compatibility
+ */
+export const hashTransactData = (data: Types.TRANSACT_HASH, fixedSort = true): string => {
 	const formattedData = {
 		address: data.address,
 		did: data.did,
@@ -11,9 +16,18 @@ export const hashTransactData = (data: Types.TRANSACT_DTO): string => {
 		txBodyHex: data.txBodyHex,
 		timestamp: data.timestamp,
 	};
-	return crypto.createHash('sha256').update(JSON.stringify(formattedData)).digest('hex');
+
+	// Sort the keys to ensure consistent ordering for the hash
+	const sortedFormattedData = JSON.stringify(formattedData, fixedSort ? Object.keys(formattedData).sort() : null);
+
+	return crypto.createHash('sha256').update(sortedFormattedData).digest('hex');
 };
 
+/**
+ * Generate a sha256 hex encoded hash from the provided hash and secureNonce
+ * @param hash - hash to generate secure hash for
+ * @param nonce - secure nonce to use in hash generation
+ */
 export const generateSecureHash = (hash: string, nonce: string): string => {
 	return crypto
 		.createHash('sha256')
@@ -21,11 +35,16 @@ export const generateSecureHash = (hash: string, nonce: string): string => {
 		.digest('hex');
 };
 
+/**
+ * Generate a deeplink uri from the provided data
+ * @param data - data to generate deeplink for (type LOGIN_DATA | TRANSACT_DATA)
+ * @param scheme - scheme to use in deeplink uri (default: 'impactsx')
+ */
 export const convertDataToDeeplink = (data: Types.LOGIN_DATA | Types.TRANSACT_DATA, scheme = 'impactsx'): string => {
 	switch (data?.type) {
 		case Constants.SIGN_X_LOGIN:
 			const loginData = data as Types.LOGIN_DATA;
-			return (
+			let loginDeeplink =
 				scheme +
 				'://signx?hash=' +
 				loginData.hash +
@@ -40,23 +59,15 @@ export const convertDataToDeeplink = (data: Types.LOGIN_DATA | Types.TRANSACT_DA
 				'&network=' +
 				loginData.network +
 				'&version=' +
-				loginData.version
-			);
+				loginData.version;
+			return loginDeeplink;
 		case Constants.SIGN_X_TRANSACT:
 			const transactData = data as Types.TRANSACT_DATA;
-			return (
-				scheme +
-				'://signx?hash=' +
-				transactData.hash +
-				'&type=' +
-				transactData.type +
-				'&sitename=' +
-				transactData.sitename +
-				'&network=' +
-				transactData.network +
-				'&version=' +
-				transactData.version
-			);
+			let transactDeeplink = scheme + '://signx?hash=' + transactData.hash + '&type=' + transactData.type + '&sitename=' + transactData.sitename + '&network=' + transactData.network + '&version=' + transactData.version;
+			if (transactData.sessionHash) transactDeeplink += '&sessionHash=' + transactData.sessionHash;
+			return transactDeeplink;
+		case Constants.SIGN_X_CLEAN_DEEPLINK:
+			return scheme + '://signx';
 		default:
 			throw new Error('Unable to convert data to deeplink - invalid data type');
 	}
