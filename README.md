@@ -27,16 +27,20 @@ Let us know how we are doing!
   - [💻 Usage](#-usage)
     - [Initialization](#initialization)
     - [Login](#login)
+    - [Data Handling](#data-handling)
     - [Transacting](#transacting)
     - [Event Handling](#event-handling)
       - [Event Descriptions](#event-descriptions)
         - [Login Events](#login-events)
+        - [Data Events](#data-events)
         - [Transaction Events](#transaction-events)
         - [Transaction session Events](#transaction-session-events)
   - [📎 Utility Functions](#-utility-functions)
     - [hashTransactData](#hashtransactdata)
     - [generateSecureHash](#generatesecurehash)
     - [convertDataToDeeplink](#convertdatatodeeplink)
+    - [encryptJson](#encryptjson)
+    - [decryptJson](#decryptjson)
   - [🖇️ API Reference](#️-api-reference)
     - [Types](#types)
     - [Class SignX](#class-signx)
@@ -47,9 +51,20 @@ Let us know how we are doing!
 
 ## 📝 Description
 
-The SignX SDK orchestrates a seamless and secure interaction between client applications, a mobile app, and a server, encapsulating the complexities of mobile-to-web authentication and transaction signing on the IXO blockchain. The flow is initiated when a client application triggers a login request through the SDK, which in turn generates a unique identifier and a secure hash. This information is encoded into a QR code that is displayed to the user. Upon scanning this QR code with the mobile app, the user's account details are securely transmitted to the server.
+The SignX SDK orchestrates a seamless and secure interaction between client applications, a mobile app, and a server, encapsulating the complexities of mobile-to-web authentication, data handling, and transaction signing on the IXO blockchain. The flow is initiated when a client application triggers a login request through the SDK, which in turn generates a unique identifier and a secure hash. This information is encoded into a QR code that is displayed to the user. Upon scanning this QR code with the mobile app, the user's account details are securely transmitted to the server.
 
 During this phase, the SDK engages in a polling mechanism, continually checking the server for the authentication response corresponding to the QR code data. This ensures that the client application is updated in near real-time once the user has completed the scanning process. The SDK has built-in error handling and timeout features to manage scenarios where the response from the server is delayed or unsuccessful. Upon receiving a successful response from the server, the SDK triggers an event notifying the client application of the successful login, and provides the user's account details for further interactions.
+
+The SDK supports secure data handling between the client application and the mobile app. This feature allows the client application to securely pass encrypted data to the mobile app, which can then decrypt and process it. The following steps outline this process:
+
+1. Data Handling Initiation:
+   When initiating a data handling request, the SDK encrypts the provided data using AES-256-CBC encryption and generates a secure hash. This encrypted data, along with its unique hash and secure hash, is sent to the server.
+2. QR Code Generation and Scanning:
+   The SDK generates a QR code containing the hash and secure hash, along with the encryption key. Upon scanning this QR code, the mobile app fetches the encrypted data from the server.
+3. Data Decryption and Processing:
+   The mobile app decrypts the data using the encryption key provided in the QR code. Depending on the type of data (e.g. kyc (KYC information)), the mobile app processes the data accordingly.
+4. Data Handling Response:
+   After processing the data, the mobile app updates the server with the result, which includes a success status and any relevant response message. The SDK then fetches this response and notifies the client application of the outcome.
 
 In its upgraded version, the SDK introduces enhanced transaction operations through the v2 transaction module from the message-relayer server. This module allows for managing a sequence of multiple transactions within a session, offering a more dynamic and flexible approach than the initial single-transaction model.
 
@@ -76,11 +91,11 @@ An important aspect to note is the session's persistence. The SDK is designed fo
 
 In summary, the SignX SDK's v2 transaction flow offers clients an efficient, flexible, and secure method for handling multiple transactions. With features like long polling, dynamic session management, and real-time updates, it provides a seamless experience for both the end-users and the client applications.
 
-Through this sophisticated flow, the SignX SDK abstracts complex technical processes, offering client applications a streamlined and secure mechanism for mobile-to-web authentication and multi-transaction processing on the IXO blockchain.
+Through this sophisticated flow, the SignX SDK abstracts complex technical processes, offering client applications a streamlined and secure mechanism for mobile-to-web authentication, secure data handling, and multi-transaction processing on the IXO blockchain.
 
-The SDK is crafted to interact harmoniously with a designated server, which handles the storage and provides the necessary endpoints for polling data during the authentication and transaction processes. To fully leverage the SDK's capabilities and ensure a streamlined operation, it is essential to set up and utilize the accompanying server, the source code for which can be found [here](https://github.com/ixofoundation/ixo-message-relayer).
+The SDK is crafted to interact harmoniously with a designated server, which handles the storage and provides the necessary endpoints for polling data during the authentication, data handling, and transaction processes. To fully leverage the SDK's capabilities and ensure a streamlined operation, it is essential to set up and utilize the accompanying server, the source code for which can be found [here](https://github.com/ixofoundation/ixo-message-relayer).
 
-Below, you'll find a diagram that shows how the SignX SDK works. It illustrates the steps involved when the client application, the Message Relayer server, and the mobile app interact with each other. This visual guide is meant to help you easily understand the process of authentication and transaction signing, making it easier to see how everything comes together.
+Below, you'll find a diagram that shows how the SignX SDK works. It illustrates the steps involved when the client application, the Message Relayer server, and the mobile app interact with each other. This visual guide is meant to help you easily understand the process of authentication, secure data handling, and transaction signing, making it easier to see how everything comes together.
 
 <p align="center">
   <img  src="assets/images/flows.png"/>
@@ -96,7 +111,7 @@ yarn add  @ixo/signx-sdk
 
 ## 💻 Usage
 
-The SignX SDK offers a client class, SignX, to facilitate secure and streamlined interactions between client applications, a mobile app, and the SignX server. This setup simplifies mobile-to-web authentication and transaction signing on the IXO blockchain.
+The SignX SDK offers a client class, SignX, to facilitate secure and streamlined interactions between client applications, a mobile app, and the SignX server. This setup simplifies mobile-to-web authentication and transaction signing on the IXO blockchain as well as secure data passing.
 
 ### Initialization
 
@@ -123,6 +138,20 @@ const loginRequest = await signXClient.login();
 ```
 
 Subscribe to login-related events for monitoring the success or failure of the login process. More details on event handling are available [here](#event-handling)
+
+### Data Handling
+
+The dataPass method is used to create a secure data request on the server. The client encrypts the data, and the mobile app decrypts and processes it.
+
+```js
+const dataRequest = await signXClient.dataPass({ data: yourData, type: 'kyc' });
+
+// Use dataRequest to show QR code to user for scanning by the mobile app
+```
+
+The method returns data indicating the encryption key and the secure hash. The SDK will handle the polling for the processing outcome.
+
+Subscribe to data-related events for monitoring the success or failure of the data process. More details on event handling are available [here](#event-handling)
 
 ### Transacting
 
@@ -165,7 +194,7 @@ Subscribe to transaction-related events for success or failure notifications [he
 
 ### Event Handling
 
-The SignX client emits various events to inform about different stages and statuses of login and transaction processes. Events are useful for real-time updates and error handling in the client application. Event strings can be imported from the SDK constants. Below is an example of how to subscribe to an event type:
+The SignX client emits various events to inform about different stages and statuses of login, data handling, and transaction processes. Events are useful for real-time updates and error handling in the client application. Event strings can be imported from the SDK constants. Below is an example of how to subscribe to an event type:
 
 ```js
 signXClient.on(SIGN_X_LOGIN_SUCCESS, data => {
@@ -194,6 +223,20 @@ signXClient.on(SIGN_X_LOGIN_SUCCESS, data => {
 ```
 
 `SIGN_X_LOGIN_ERROR`: Emitted in case of any error during the login process. Returns an error message.
+
+##### Data Events
+
+`SIGN_X_DATA_SUCCESS`: Emitted when the data request is processed successfully by the mobile app, returning the processing outcome. Returns:
+
+```js
+{
+   message: 'Data response fetched successfully',
+   response: "response message from mobile app" // dynamic field, can be string or object de[pending on mobile handling for the data type]
+   success: true,
+}
+```
+
+`SIGN_X_DATA_ERROR`:Emitted in case of any error during the data processing, returning an error message.
 
 ##### Transaction Events
 
@@ -280,8 +323,26 @@ The ImpactsX App can handle the SignX deeplinks, meaning if it is opened on mobi
 The data parameter is used to determine the type from `data.type` and conversely parse the rest of data and generate the deeplink according to the type property. If you want to generate a generic clean deeplink then use a object with `type: SIGN_X_CLEAN_DEEPLINK`.
 
 ```js
-// convertDataToDeeplink(data: Types.LOGIN_DATA | Types.TRANSACT_DATA, scheme = 'impactsx'): string
-const deeplinkUri = convertDataToDeeplink(data); // data is the object returned from transact or login methods
+// convertDataToDeeplink(data: Types.LOGIN_DATA | Types.TRANSACT_DATA | Types.DATA_PASS_DATA, scheme = 'impactsx'): string
+const deeplinkUri = convertDataToDeeplink(data); // data is the object returned from transact, login, or dataPass methods
+```
+
+### encryptJson
+
+Encrypts a JSON object with the provided key (hexadecimal string) using AES-256-CBC encryption. The encrypted data is returned as a base64 encoded string. This function ensures secure data transmission and storage by converting a JSON object to a string, encrypting it with AES-256-CBC, and then encoding it in base64 for safe transfer.
+
+```js
+// encryptJson<T>(jsonData: T, key: string): string
+const encryptedData = encryptJson(yourData, 'yourEncryptionKeyInHex');
+```
+
+### decryptJson
+
+Decrypts a base64 encoded string containing encrypted JSON data using AES-256-CBC decryption. This function reverses the encryption process, taking a base64 encoded string, extracting the IV, decrypting the data with the provided key, and returning the original JSON object.
+
+```js
+// decryptJson<T>(encryptedData: string, key: string): T
+const decryptedData = decryptJson(encryptedData, 'yourEncryptionKeyInHex');
 ```
 
 ## 🖇️ API Reference
@@ -325,6 +386,7 @@ const deeplinkUri = convertDataToDeeplink(data); // data is the object returned 
 #### Methods
 
 - `login()`: Initiates a login request and starts polling for authentication response.
+- `dataPass(data, type, pollingInterval?)`: Initiates a secure data request, encrypts the data, uploads it to the server, and starts polling for the data response.
 - `transact(transactData, forceNewSession = false)`: Initiates or add to a transaction session and starts polling for response of active transaction.
 - `pollTransactionResponse(activeTrxHash)`: Poll for the active transaction response, which is identified through the provided activeTrxHash paramater, thus knowing the activeTrxHash is neccesary.
 - `pollNextTransaction()`: Poll for the next transaction in a session, will also error if session ends on server side, will grab the transactSessionHash, so a current active session is required. Useful when awaiting the progression of transaction sequences.
@@ -332,11 +394,11 @@ const deeplinkUri = convertDataToDeeplink(data); // data is the object returned 
 
 ## 📱 Examples
 
-The SignX SDK, with its comprehensive client properties and methods, and the ability to emit crucial events, empowers developers to create bespoke user interfaces that not only guide users through the mobile handling process via QR codes or deeplinks but also keep them informed about their progress in the transaction session. Developers can leverage the SDK to showcase the transaction session sequence to users, updating them when a new transaction signing is required on the mobile device.
+The SignX SDK, with its comprehensive client properties and methods, and the ability to emit crucial events, empowers developers to create bespoke user interfaces that not only guide users through the mobile handling process via QR codes or deeplinks but also keep them informed about their progress in the transaction session, or data handling. Developers can leverage the SDK to showcase the transaction session sequence to users, updating them when a new transaction signing is required on the mobile device.
 
 It's important to note that while the transaction session feature is versatile, allowing multiple transactions to be batched together, it's not mandatory to use it in full. Developers have the flexibility to initiate just a single transaction per session, simplifying the process. Conversely, the SDK supports dependent sequential transactions, enabling developers to add subsequent transactions only after the prior one has been successfully signed and broadcasted, and necessary data for the next transaction is available. This flexibility is especially useful in cases where transactions are too large and need to be split into smaller, more manageable parts for efficient blockchain processing. The SignX SDK offers a range of possibilities and workflows to suit various requirements.
 
-In the upcoming example, we illustrate a basic and straightforward implementation of the SignX SDK, inside a React website. This example demonstrates a simple flow that aligns with Cosmos offline wallet signer types and takes advantage of the session feature. It showcases the addition of transactions to an ongoing session, provided the session remains active within its timeout period. This approach is ideal for scenarios where transactions are dependent on one another, ensuring smooth and efficient transaction processing. But in then case the session expired it will start a new session and accordingly display the QR with needed data for mobile to grab the new session.
+In the upcoming example, we illustrate a basic and straightforward implementation of the SignX SDK, inside a React website. This example demonstrates a simple flow that aligns with Cosmos offline wallet signer types and takes advantage of the session feature. It showcases the addition of transactions to an ongoing session, provided the session remains active within its timeout period. This approach is ideal for scenarios where transactions are dependent on one another, ensuring smooth and efficient transaction processing. But in then case the session expired it will start a new session and accordingly display the QR with needed data for mobile to grab the new session. It also showcases how to call the dataPass method and how it can also be plugged into the generic signX QR/deeplink interface that already exists for the login and transactions flow.
 
 ```ts
 let signXClient: SignX;
@@ -459,6 +521,53 @@ export const signXBroadCastMessage = async (msgs: TRX_MSG[], memo = '', fee: TRX
 		// remove event listeners
 		signXClient.removeAllListeners(SIGN_X_TRANSACT_ERROR);
 		signXClient.removeAllListeners(SIGN_X_TRANSACT_SUCCESS);
+	}
+};
+
+let signXDDataPassBusy = false;
+export const signXDataPass = async (jsonData: any, type: string): Promise<any> => {
+	if (signXDDataPassBusy) return null;
+	signXDDataPassBusy = true;
+
+	let removeModal: () => void;
+	// callback for when modal is closed manually
+	let onManualCloseModal = (clearSession = true) => {
+		signXClient.stopPolling('Data Pass cancelled', SIGN_X_DATA_ERROR, clearSession);
+	};
+
+	try {
+		if (!signXClient) throw new Error('No signX client initiated');
+
+		// get data pass data from client to start polling and display QR code for key passing
+		const data = await signXClient.dataPass({
+			data: jsonData,
+			type,
+		});
+
+		removeModal = renderModal(<SignXModal title="SignX Data Pass" data={data} timeout={signXClient.timeout} transactSequence={1} />, onManualCloseModal);
+
+		// wait for data to be passed and handled and SignX to emit success or fail event
+		const eventData: any = await new Promise((resolve, reject) => {
+			const handleSuccess = (data: any) => resolve(data);
+			const handleError = (error: any) => reject(error);
+			signXClient.on(SIGN_X_DATA_SUCCESS, handleSuccess);
+			signXClient.on(SIGN_X_DATA_ERROR, handleError);
+		});
+
+		return eventData;
+	} catch (e: any) {
+		console.error('ERROR::signXDataPass::', e);
+		Toast.errorToast(`SignX Data Pass Failed: ${e.message}`);
+		return null;
+	} finally {
+		signXDDataPassBusy = false;
+		// @ts-ignore
+		if (removeModal) removeModal();
+		// @ts-ignore
+		if (onManualCloseModal) onManualCloseModal(false);
+		// remove event listeners
+		signXClient.removeAllListeners(SIGN_X_DATA_ERROR);
+		signXClient.removeAllListeners(SIGN_X_DATA_SUCCESS);
 	}
 };
 ```

@@ -4,6 +4,7 @@ import { EventEmitter } from 'events';
 import * as Random from './utils/random';
 import * as Types from './types/transact';
 import * as Encoding from './utils/encoding';
+import * as Encryption from './utils/encryption';
 import * as Constants from './constants/signx';
 
 const MAX_TRANSACTIONS = 99;
@@ -62,6 +63,43 @@ export class SignX extends EventEmitter {
 			timeout: new Date(Date.now() + this.timeout).toISOString(),
 			network: this.network,
 			version: Constants.LOGIN_VERSION,
+		};
+	}
+
+	/**
+	 *
+	 */
+	async dataPass(p: { data: any; type: string; pollingInterval?: number }): Promise<Types.DATA_PASS_DATA> {
+		const secureNonce = this.generateRandomHash();
+		const hash = this.generateRandomHash();
+		const encryptionKey = this.generateRandomHash();
+		const secureHash = Encoding.generateSecureHash(hash, secureNonce);
+
+		// encrypt data
+		const encryptedData = Encryption.encryptJson(p.data, encryptionKey);
+
+		const res = await axios.post(this.endpoint + Constants.ROUTES.data.create, {
+			hash,
+			type: p.type,
+			data: encryptedData,
+		});
+
+		if (!res.data.success) throw new Error(res.data.data?.message || 'Data creation failed');
+
+		// start polling for data response
+		this.startPolling(Constants.ROUTES.data.response, { hash, secureNonce }, Constants.SIGN_X_DATA_SUCCESS, Constants.SIGN_X_DATA_ERROR, p.pollingInterval);
+
+		// return dataPass data for client to generate deeplink/QR code
+		return {
+			hash,
+			secureHash,
+			key: encryptionKey,
+			type: Constants.SIGN_X_DATA,
+			dataType: p.type,
+			sitename: this.sitename,
+			timeout: new Date(Date.now() + this.timeout).toISOString(),
+			network: this.network,
+			version: Constants.DATA_VERSION,
 		};
 	}
 
@@ -188,6 +226,7 @@ export class SignX extends EventEmitter {
 	 */
 	private startPolling(route: string, body: any, successEvent: string, failEvent: string, customPollingInterval?: number): void {
 		const isLogin = route.includes(Constants.ROUTES.login.fetch);
+		const isData = route.includes(Constants.ROUTES.data.response);
 		const isTransactionResponse = route.includes(Constants.ROUTES.transact.response);
 		const isTransactionNext = route.includes(Constants.ROUTES.transact.next);
 		const startTime = Date.now();
@@ -214,11 +253,16 @@ export class SignX extends EventEmitter {
 					this.stopPolling(undefined, undefined, false);
 					finished = true;
 					// if response data contains success property, then check and throw error if false
-					if (!(response.data?.data?.success ?? true)) throw new Error(response.data?.data?.data?.message ?? response.data?.data?.message ?? response.data?.data);
+					if (!(response.data?.data?.success ?? true)) {
+						let errorMessage = response.data?.data?.data?.message ?? response.data?.data?.message ?? response.data?.data;
+						if (isData) errorMessage = response.data?.data?.response;
+						throw new Error(errorMessage);
+					}
 
 					// validate response data with custom errors
 					const data = response.data.data?.data ?? {};
 					if (isLogin && (!data.address || !data.pubKey || !data.did)) throw new Error('Account details missing');
+					if (isData && !response.data.data?.response) throw new Error('Data response missing');
 					if (isTransactionResponse && (data.code != 0 || !data.transactionHash)) throw new Error('Transaction failed, no success code');
 
 					this.emit(successEvent, response.data.data);

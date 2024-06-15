@@ -8,6 +8,17 @@ export type LOGIN_DATA = {
     network: NETWORK;
     version: number;
 };
+export type DATA_PASS_DATA = {
+    hash: string;
+    secureHash: string;
+    key: string;
+    type: string;
+    dataType: string;
+    sitename: string;
+    timeout: string;
+    network: NETWORK;
+    version: number;
+};
 export type TRANSACTION = {
     txBodyHex: string;
     sequence?: number;

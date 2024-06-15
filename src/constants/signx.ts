@@ -2,6 +2,10 @@ export const SIGN_X_LOGIN = 'SIGN_X_LOGIN';
 export const SIGN_X_LOGIN_SUCCESS = 'SIGN_X_LOGIN_SUCCESS';
 export const SIGN_X_LOGIN_ERROR = 'SIGN_X_LOGIN_ERROR';
 
+export const SIGN_X_DATA = 'SIGN_X_DATA';
+export const SIGN_X_DATA_SUCCESS = 'SIGN_X_DATA_SUCCESS';
+export const SIGN_X_DATA_ERROR = 'SIGN_X_DATA_ERROR';
+
 export const SIGN_X_CLEAN_DEEPLINK = 'SIGN_X_CLEAN_DEEPLINK';
 
 export const SIGN_X_TRANSACT = 'SIGN_X_TRANSACT';
@@ -14,6 +18,7 @@ export const SIGN_X_TRANSACT_SESSION_ENDED = 'SIGN_X_TRANSACT_SESSION_ENDED';
 
 export const LOGIN_VERSION = 1;
 export const TRANSACT_VERSION = 2;
+export const DATA_VERSION = 1;
 
 export const ROUTES = {
 	login: {
@@ -24,5 +29,9 @@ export const ROUTES = {
 		add: '/transaction/v2/add',
 		response: '/transaction/v2/response',
 		next: '/transaction/v2/next',
+	},
+	data: {
+		create: '/data/create',
+		response: '/data/response',
 	},
 };

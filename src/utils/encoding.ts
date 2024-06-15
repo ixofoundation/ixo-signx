@@ -40,7 +40,7 @@ export const generateSecureHash = (hash: string, nonce: string): string => {
  * @param data - data to generate deeplink for (type LOGIN_DATA | TRANSACT_DATA)
  * @param scheme - scheme to use in deeplink uri (default: 'impactsx')
  */
-export const convertDataToDeeplink = (data: Types.LOGIN_DATA | Types.TRANSACT_DATA, scheme = 'impactsx'): string => {
+export const convertDataToDeeplink = (data: Types.LOGIN_DATA | Types.TRANSACT_DATA | Types.DATA_PASS_DATA, scheme = 'impactsx'): string => {
 	switch (data?.type) {
 		case Constants.SIGN_X_LOGIN:
 			const loginData = data as Types.LOGIN_DATA;
@@ -61,6 +61,29 @@ export const convertDataToDeeplink = (data: Types.LOGIN_DATA | Types.TRANSACT_DA
 				'&version=' +
 				loginData.version;
 			return loginDeeplink;
+		case Constants.SIGN_X_DATA:
+			const dataPassData = data as Types.DATA_PASS_DATA;
+			let dataDeeplink =
+				scheme +
+				'://signx?hash=' +
+				dataPassData.hash +
+				'&secureHash=' +
+				dataPassData.secureHash +
+				'&key=' +
+				dataPassData.key +
+				'&type=' +
+				dataPassData.type +
+				'&dataType=' +
+				dataPassData.dataType +
+				'&sitename=' +
+				dataPassData.sitename +
+				'&timeout=' +
+				dataPassData.timeout +
+				'&network=' +
+				dataPassData.network +
+				'&version=' +
+				dataPassData.version;
+			return dataDeeplink;
 		case Constants.SIGN_X_TRANSACT:
 			const transactData = data as Types.TRANSACT_DATA;
 			let transactDeeplink = scheme + '://signx?hash=' + transactData.hash + '&type=' + transactData.type + '&sitename=' + transactData.sitename + '&network=' + transactData.network + '&version=' + transactData.version;

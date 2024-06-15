@@ -32,6 +32,14 @@ export declare class SignX extends EventEmitter {
         pollingInterval?: number;
     }): Promise<Types.LOGIN_DATA>;
     /**
+     *
+     */
+    dataPass(p: {
+        data: any;
+        type: string;
+        pollingInterval?: number;
+    }): Promise<Types.DATA_PASS_DATA>;
+    /**
      * Create or add transactions to an existing transaction session, if no session exists, a new session is created.
      * If new session is created, the client should generate a new deeplink/QR code for the user to scan to start the mobile app flow.
      * If existing session is used, the client should not generate a new deeplink/QR code, the transactions will jsut be added to the existing session and the polling that is already in progress will continue and pick up the new transactions added to the server.
@@ -68,11 +76,11 @@ export declare class SignX extends EventEmitter {
     /**
      * Setup the window beforeunload listener to abort any pending requests
      */
-    setupBeforeUnloadListener(): void;
+    private setupBeforeUnloadListener;
     /**
      * Abort any pending axios requests when the tab is closing
      */
-    abortPendingRequests: () => void;
+    private abortPendingRequests;
     /**
      * Dispose the SignX instance, stop polling and clear session data
      */
