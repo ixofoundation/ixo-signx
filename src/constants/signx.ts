@@ -16,9 +16,14 @@ export const SIGN_X_TRANSACT_SESSION_STARTED = 'SIGN_X_TRANSACT_SESSION_STARTED'
 export const SIGN_X_TRANSACT_SESSION_NEW_TRANSACTION = 'SIGN_X_TRANSACT_SESSION_NEW_TRANSACTION';
 export const SIGN_X_TRANSACT_SESSION_ENDED = 'SIGN_X_TRANSACT_SESSION_ENDED';
 
+export const SIGN_X_MATRIX_LOGIN = 'SIGN_X_MATRIX_LOGIN';
+export const SIGN_X_MATRIX_LOGIN_SUCCESS = 'SIGN_X_MATRIX_LOGIN_SUCCESS';
+export const SIGN_X_MATRIX_LOGIN_ERROR = 'SIGN_X_MATRIX_LOGIN_ERROR';
+
 export const LOGIN_VERSION = 1;
 export const TRANSACT_VERSION = 2;
 export const DATA_VERSION = 1;
+export const MATRIX_VERSION = 1;
 
 export const ROUTES = {
 	login: {
@@ -33,5 +38,8 @@ export const ROUTES = {
 	data: {
 		create: '/data/create',
 		response: '/data/response',
+	},
+	matrix_login: {
+		fetch: '/matrix/login/fetch',
 	},
 };
