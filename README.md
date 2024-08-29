@@ -32,6 +32,7 @@ Let us know how we are doing!
     - [Event Handling](#event-handling)
       - [Event Descriptions](#event-descriptions)
         - [Login Events](#login-events)
+        - [Matrix Login Events](#matrix-login-events)
         - [Data Events](#data-events)
         - [Transaction Events](#transaction-events)
         - [Transaction session Events](#transaction-session-events)
@@ -53,7 +54,7 @@ Let us know how we are doing!
 
 The SignX SDK orchestrates a seamless and secure interaction between client applications, a mobile app, and a server, encapsulating the complexities of mobile-to-web authentication, data handling, and transaction signing on the IXO blockchain. The flow is initiated when a client application triggers a login request through the SDK, which in turn generates a unique identifier and a secure hash. This information is encoded into a QR code that is displayed to the user. Upon scanning this QR code with the mobile app, the user's account details are securely transmitted to the server.
 
-During this phase, the SDK engages in a polling mechanism, continually checking the server for the authentication response corresponding to the QR code data. This ensures that the client application is updated in near real-time once the user has completed the scanning process. The SDK has built-in error handling and timeout features to manage scenarios where the response from the server is delayed or unsuccessful. Upon receiving a successful response from the server, the SDK triggers an event notifying the client application of the successful login, and provides the user's account details for further interactions.
+During this phase, the SDK engages in a polling mechanism, continually checking the server for the authentication response corresponding to the QR code data. This ensures that the client application is updated in near real-time once the user has completed the scanning process. The SDK has built-in error handling and timeout features to manage scenarios where the response from the server is delayed or unsuccessful. Upon receiving a successful response from the server, the SDK triggers an event notifying the client application of the successful login, and provides the user's account details for further interactions.The SDK also supports an optional parameter during the login process to include matrix data in the response payload. This feature enables developers to fetch the user's matrix details (such as access tokens and room IDs) during the login process if specified.
 
 The SDK supports secure data handling between the client application and the mobile app. This feature allows the client application to securely pass encrypted data to the mobile app, which can then decrypt and process it. The following steps outline this process:
 
@@ -129,10 +130,13 @@ const signXClient = new SignX({
 
 ### Login
 
-To initiate a login request, use the `login` method. This generates necessary data, including a unique hash and secure hash, for QR code generation.
+To initiate a login request, use the `login` method. This generates necessary data, including a unique hash and secure hash, for QR code generation. Optionally, the user's matrix details can be included in the login request by setting the `matrix` parameter to `true`.
 
 ```js
 const loginRequest = await signXClient.login();
+
+// to include the user's matrix details in the login request
+const loginRequest = await signXClient.login({ matrix: true });
 
 // Use loginRequest data to display a QR code for scanning by the mobile app
 ```
@@ -197,7 +201,7 @@ Subscribe to transaction-related events for success or failure notifications [he
 The SignX client emits various events to inform about different stages and statuses of login, data handling, and transaction processes. Events are useful for real-time updates and error handling in the client application. Event strings can be imported from the SDK constants. Below is an example of how to subscribe to an event type:
 
 ```js
-signXClient.on(SIGN_X_LOGIN_SUCCESS, data => {
+signXClient.on(SIGN_X_LOGIN_SUCCESS, (data) => {
 	console.log('Login Success:', data);
 });
 ```
@@ -206,23 +210,47 @@ signXClient.on(SIGN_X_LOGIN_SUCCESS, data => {
 
 ##### Login Events
 
-`SIGN_X_LOGIN_SUCCESS`: Emitted when the login process completes successfully, returning user's account details. Returns:
+`SIGN_X_LOGIN_SUCCESS`: Emitted when the login process completes successfully, returning user's account details (including the user's matrix details if specified during login). Returns:
 
 ```js
 {
-   message: 'Login request fetched successfully',
-   success: true,
-   data: {
-     name: "wallet name on ImpactsX",
-     address: "account address",
-     pubKey: "hex encoded pubkey",
-     algo: "wallet algo type (secp/ed)",
-     did: "wallet did",
-   },
+	message: 'Login request fetched successfully',
+	success: true,
+	data: {
+		name: "wallet name on ImpactsX",
+		address: "account address",
+		pubKey: "hex encoded pubkey",
+		algo: "wallet algo type (secp/ed)",
+		did: "wallet did",
+		// Only returned if matrix is specified during login and user has matrix account
+		matrix: {
+			accessToken: "Unique matrix access token",
+			userId: "User's matrix account id",
+			roomId: "User's DID matrix room id",
+		}
+	},
 }
 ```
 
 `SIGN_X_LOGIN_ERROR`: Emitted in case of any error during the login process. Returns an error message.
+
+##### Matrix Login Events
+
+`SIGN_X_MATRIX_LOGIN_SUCCESS`: Emitted when the matrix login process completes successfully, returning the matrix-specific authentication details. Returns:
+
+```js
+{
+	message: 'Matrix login request fetched successfully',
+	success: true,
+	data: {
+		accessToken: "Matrix access token",
+		userId: "Matrix user ID",
+		deviceId: "Matrix device ID",
+	},
+}
+```
+
+`SIGN_X_MATRIX_LOGIN_ERROR`: Emitted in case of any error during the matrix login process. Returns an error message.
 
 ##### Data Events
 
@@ -323,8 +351,8 @@ The ImpactsX App can handle the SignX deeplinks, meaning if it is opened on mobi
 The data parameter is used to determine the type from `data.type` and conversely parse the rest of data and generate the deeplink according to the type property. If you want to generate a generic clean deeplink then use a object with `type: SIGN_X_CLEAN_DEEPLINK`.
 
 ```js
-// convertDataToDeeplink(data: Types.LOGIN_DATA | Types.TRANSACT_DATA | Types.DATA_PASS_DATA, scheme = 'impactsx'): string
-const deeplinkUri = convertDataToDeeplink(data); // data is the object returned from transact, login, or dataPass methods
+// convertDataToDeeplink(data: Types.LOGIN_DATA | Types.TRANSACT_DATA | Types.DATA_PASS_DATA | Types.MATRIX_LOGIN_DATA, scheme = 'impactsx'): string
+const deeplinkUri = convertDataToDeeplink(data); // data is the object returned from transact, login, matrixLogin, or dataPass methods
 ```
 
 ### encryptJson
@@ -386,6 +414,7 @@ const decryptedData = decryptJson(encryptedData, 'yourEncryptionKeyInHex');
 #### Methods
 
 - `login()`: Initiates a login request and starts polling for authentication response.
+- `matrixLogin()`: Initiates a matrix login request and starts polling for authentication response.
 - `dataPass(data, type, pollingInterval?)`: Initiates a secure data request, encrypts the data, uploads it to the server, and starts polling for the data response.
 - `transact(transactData, forceNewSession = false)`: Initiates or add to a transaction session and starts polling for response of active transaction.
 - `pollTransactionResponse(activeTrxHash)`: Poll for the active transaction response, which is identified through the provided activeTrxHash paramater, thus knowing the activeTrxHash is neccesary.
@@ -404,13 +433,17 @@ In the upcoming example, we illustrate a basic and straightforward implementatio
 let signXClient: SignX;
 
 let signXInitializing = false;
-export const initializeSignX = async (chainInfo: KEPLR_CHAIN_INFO_TYPE, walletUser?: USER): Promise<USER | undefined> => {
+export const initializeSignX = async (
+	chainInfo: KEPLR_CHAIN_INFO_TYPE,
+	walletUser?: USER,
+): Promise<USER | undefined> => {
 	if (signXInitializing) return;
 	signXInitializing = true;
 
 	let removeModal: () => void;
 	try {
-		if (walletUser?.chainId && walletUser?.chainId !== chainInfo.chainId) throw new Error('Chains changed, please logout and login again');
+		if (walletUser?.chainId && walletUser?.chainId !== chainInfo.chainId)
+			throw new Error('Chains changed, please logout and login again');
 		if (!chainInfo || !chainInfo.chainId) throw new Error('No chain info found to initialize SignX');
 		if (chainInfo.chainName !== 'ixo') throw new Error('SignX only works on ixo chain');
 
@@ -431,7 +464,10 @@ export const initializeSignX = async (chainInfo: KEPLR_CHAIN_INFO_TYPE, walletUs
 			signXClient.stopPolling('Login cancelled', SIGN_X_LOGIN_ERROR);
 		};
 
-		removeModal = renderModal(<SignXModal title="SignX Login" data={data} timeout={signXClient.timeout} transactSequence={1} />, onManualCloseModal);
+		removeModal = renderModal(
+			<SignXModal title="SignX Login" data={data} timeout={signXClient.timeout} transactSequence={1} />,
+			onManualCloseModal,
+		);
 
 		const eventData: any = await new Promise((resolve, reject) => {
 			const handleSuccess = (data: any) => resolve(data);
@@ -463,7 +499,14 @@ export const initializeSignX = async (chainInfo: KEPLR_CHAIN_INFO_TYPE, walletUs
 };
 
 let signXBroadCastMessageBusy = false;
-export const signXBroadCastMessage = async (msgs: TRX_MSG[], memo = '', fee: TRX_FEE_OPTION, feeDenom: string, chainInfo: KEPLR_CHAIN_INFO_TYPE, wallet: WALLET): Promise<string | null> => {
+export const signXBroadCastMessage = async (
+	msgs: TRX_MSG[],
+	memo = '',
+	fee: TRX_FEE_OPTION,
+	feeDenom: string,
+	chainInfo: KEPLR_CHAIN_INFO_TYPE,
+	wallet: WALLET,
+): Promise<string | null> => {
 	if (signXBroadCastMessageBusy) return null;
 	signXBroadCastMessageBusy = true;
 
@@ -497,7 +540,15 @@ export const signXBroadCastMessage = async (msgs: TRX_MSG[], memo = '', fee: TRX
 			signXClient.pollNextTransaction();
 		}
 
-		removeModal = renderModal(<SignXModal title="SignX Transaction" data={data} timeout={signXClient.timeout} transactSequence={signXClient.transactSequence} />, onManualCloseModal);
+		removeModal = renderModal(
+			<SignXModal
+				title="SignX Transaction"
+				data={data}
+				timeout={signXClient.timeout}
+				transactSequence={signXClient.transactSequence}
+			/>,
+			onManualCloseModal,
+		);
 
 		// wait for transaction to be broadcasted and SignX to emit success or fail event
 		const eventData: any = await new Promise((resolve, reject) => {
@@ -544,7 +595,10 @@ export const signXDataPass = async (jsonData: any, type: string): Promise<any> =
 			type,
 		});
 
-		removeModal = renderModal(<SignXModal title="SignX Data Pass" data={data} timeout={signXClient.timeout} transactSequence={1} />, onManualCloseModal);
+		removeModal = renderModal(
+			<SignXModal title="SignX Data Pass" data={data} timeout={signXClient.timeout} transactSequence={1} />,
+			onManualCloseModal,
+		);
 
 		// wait for data to be passed and handled and SignX to emit success or fail event
 		const eventData: any = await new Promise((resolve, reject) => {
@@ -589,7 +643,10 @@ const SignX: FC<SignXProps> = ({ title, subtitle, data, timeout, transactSequenc
 	const timeoutFull = (timeout - 1000) / 1000;
 	const timeoutThird = timeoutFull / 3;
 	const deeplink = convertDataToDeeplink(isNewSession ? data : { type: SIGN_X_CLEAN_DEEPLINK });
-	const downloadLink = isIOS || isMacOs ? `https://apps.apple.com/app/impacts-x/id6444948058` : `https://play.google.com/store/apps/details?id=com.ixo.mobile`;
+	const downloadLink =
+		isIOS || isMacOs
+			? `https://apps.apple.com/app/impacts-x/id6444948058`
+			: `https://play.google.com/store/apps/details?id=com.ixo.mobile`;
 
 	useEffect(() => {
 		if (firstLoad.current) return;

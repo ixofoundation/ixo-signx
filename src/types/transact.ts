@@ -8,6 +8,17 @@ export type LOGIN_DATA = {
 	timeout: string;
 	network: NETWORK;
 	version: number;
+	matrix: boolean;
+};
+
+export type MATRIX_LOGIN_DATA = {
+	hash: string;
+	secureHash: string;
+	type: string;
+	sitename: string;
+	timeout: string;
+	network: NETWORK;
+	version: number;
 };
 
 export type DATA_PASS_DATA = {

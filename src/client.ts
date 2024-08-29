@@ -24,7 +24,13 @@ export class SignX extends EventEmitter {
 
 	private axiosAbortController = new AbortController();
 
-	constructor(p: { endpoint: string; sitename: string; network: Types.NETWORK; timeout?: number; pollingInterval?: number }) {
+	constructor(p: {
+		endpoint: string;
+		sitename: string;
+		network: Types.NETWORK;
+		timeout?: number;
+		pollingInterval?: number;
+	}) {
 		super();
 		this.endpoint = p.endpoint;
 		this.sitename = p.sitename;
@@ -45,14 +51,21 @@ export class SignX extends EventEmitter {
 	/**
 	 * Start the login flow, returns login data for client to generate deeplink/QR code
 	 * @param {number} pollingInterval - custom polling interval (optional)
+	 * @param {boolean} matrix - whether to include matrix data in the login request (optional)
 	 */
-	async login(p: { pollingInterval?: number }): Promise<Types.LOGIN_DATA> {
+	async login(p: { pollingInterval?: number; matrix?: boolean }): Promise<Types.LOGIN_DATA> {
 		const secureNonce = this.generateRandomHash();
 		const hash = this.generateRandomHash();
 		const secureHash = Encoding.generateSecureHash(hash, secureNonce);
 
 		// start polling for login response
-		this.startPolling(Constants.ROUTES.login.fetch, { hash, secureNonce }, Constants.SIGN_X_LOGIN_SUCCESS, Constants.SIGN_X_LOGIN_ERROR, p.pollingInterval);
+		this.startPolling(
+			Constants.ROUTES.login.fetch,
+			{ hash, secureNonce },
+			Constants.SIGN_X_LOGIN_SUCCESS,
+			Constants.SIGN_X_LOGIN_ERROR,
+			p.pollingInterval,
+		);
 
 		// return login data for client to generate deeplink/QR code
 		return {
@@ -62,7 +75,38 @@ export class SignX extends EventEmitter {
 			sitename: this.sitename,
 			timeout: new Date(Date.now() + this.timeout).toISOString(),
 			network: this.network,
+			matrix: p.matrix ?? false,
 			version: Constants.LOGIN_VERSION,
+		};
+	}
+
+	/**
+	 * Start the matrix login flow, returns matrix login data for client to generate deeplink/QR code
+	 * @param {number} pollingInterval - custom polling interval (optional)
+	 */
+	async matrixLogin(p: { pollingInterval?: number }): Promise<Types.MATRIX_LOGIN_DATA> {
+		const secureNonce = this.generateRandomHash();
+		const hash = this.generateRandomHash();
+		const secureHash = Encoding.generateSecureHash(hash, secureNonce);
+
+		// start polling for matrix login response
+		this.startPolling(
+			Constants.ROUTES.matrix_login.fetch,
+			{ hash, secureNonce },
+			Constants.SIGN_X_MATRIX_LOGIN_SUCCESS,
+			Constants.SIGN_X_MATRIX_LOGIN_ERROR,
+			p.pollingInterval,
+		);
+
+		// return matrix login data for client to generate deeplink/QR code
+		return {
+			hash,
+			secureHash,
+			type: Constants.SIGN_X_MATRIX_LOGIN,
+			sitename: this.sitename,
+			timeout: new Date(Date.now() + this.timeout).toISOString(),
+			network: this.network,
+			version: Constants.MATRIX_VERSION,
 		};
 	}
 
@@ -87,7 +131,13 @@ export class SignX extends EventEmitter {
 		if (!res.data.success) throw new Error(res.data.data?.message || 'Data creation failed');
 
 		// start polling for data response
-		this.startPolling(Constants.ROUTES.data.response, { hash, secureNonce }, Constants.SIGN_X_DATA_SUCCESS, Constants.SIGN_X_DATA_ERROR, p.pollingInterval);
+		this.startPolling(
+			Constants.ROUTES.data.response,
+			{ hash, secureNonce },
+			Constants.SIGN_X_DATA_SUCCESS,
+			Constants.SIGN_X_DATA_ERROR,
+			p.pollingInterval,
+		);
 
 		// return dataPass data for client to generate deeplink/QR code
 		return {
@@ -201,7 +251,12 @@ export class SignX extends EventEmitter {
 	 * @param {string} activeTrxHash - hash of the active transaction to start polling for
 	 */
 	public pollTransactionResponse(activeTrxHash: string) {
-		this.startPolling(Constants.ROUTES.transact.response, { hash: activeTrxHash, secureNonce: this.transactSecureNonce }, Constants.SIGN_X_TRANSACT_SUCCESS, Constants.SIGN_X_TRANSACT_ERROR);
+		this.startPolling(
+			Constants.ROUTES.transact.response,
+			{ hash: activeTrxHash, secureNonce: this.transactSecureNonce },
+			Constants.SIGN_X_TRANSACT_SUCCESS,
+			Constants.SIGN_X_TRANSACT_ERROR,
+		);
 	}
 
 	/**
@@ -224,11 +279,18 @@ export class SignX extends EventEmitter {
 	 * @param {string} failEvent - event to emit on failure
 	 * @param {number} customPollingInterval - custom polling interval
 	 */
-	private startPolling(route: string, body: any, successEvent: string, failEvent: string, customPollingInterval?: number): void {
-		const isLogin = route.includes(Constants.ROUTES.login.fetch);
-		const isData = route.includes(Constants.ROUTES.data.response);
-		const isTransactionResponse = route.includes(Constants.ROUTES.transact.response);
-		const isTransactionNext = route.includes(Constants.ROUTES.transact.next);
+	private startPolling(
+		route: string,
+		body: any,
+		successEvent: string,
+		failEvent: string,
+		customPollingInterval?: number,
+	): void {
+		const isLogin = route == Constants.ROUTES.login.fetch;
+		const isMatrixLogin = route == Constants.ROUTES.matrix_login.fetch;
+		const isData = route == Constants.ROUTES.data.response;
+		const isTransactionResponse = route == Constants.ROUTES.transact.response;
+		const isTransactionNext = route == Constants.ROUTES.transact.next;
 		const startTime = Date.now();
 		let finished = false;
 
@@ -254,16 +316,19 @@ export class SignX extends EventEmitter {
 					finished = true;
 					// if response data contains success property, then check and throw error if false
 					if (!(response.data?.data?.success ?? true)) {
-						let errorMessage = response.data?.data?.data?.message ?? response.data?.data?.message ?? response.data?.data;
+						let errorMessage =
+							response.data?.data?.data?.message ?? response.data?.data?.message ?? response.data?.data;
 						if (isData) errorMessage = response.data?.data?.response;
 						throw new Error(errorMessage);
 					}
 
 					// validate response data with custom errors
 					const data = response.data.data?.data ?? {};
+					if (isMatrixLogin && !data.accessToken) throw new Error('Matrix details missing');
 					if (isLogin && (!data.address || !data.pubKey || !data.did)) throw new Error('Account details missing');
 					if (isData && !response.data.data?.response) throw new Error('Data response missing');
-					if (isTransactionResponse && (data.code != 0 || !data.transactionHash)) throw new Error('Transaction failed, no success code');
+					if (isTransactionResponse && (data.code != 0 || !data.transactionHash))
+						throw new Error('Transaction failed, no success code');
 
 					this.emit(successEvent, response.data.data);
 

@@ -40,10 +40,35 @@ export const generateSecureHash = (hash: string, nonce: string): string => {
  * @param data - data to generate deeplink for (type LOGIN_DATA | TRANSACT_DATA)
  * @param scheme - scheme to use in deeplink uri (default: 'impactsx')
  */
-export const convertDataToDeeplink = (data: Types.LOGIN_DATA | Types.TRANSACT_DATA | Types.DATA_PASS_DATA, scheme = 'impactsx'): string => {
+export const convertDataToDeeplink = (
+	data: Types.LOGIN_DATA | Types.TRANSACT_DATA | Types.DATA_PASS_DATA,
+	scheme = 'impactsx',
+): string => {
 	switch (data?.type) {
-		case Constants.SIGN_X_LOGIN:
+		case Constants.SIGN_X_LOGIN: {
 			const loginData = data as Types.LOGIN_DATA;
+			let loginDeeplink =
+				scheme +
+				'://signx?hash=' +
+				loginData.hash +
+				'&secureHash=' +
+				loginData.secureHash +
+				'&type=' +
+				loginData.type +
+				'&sitename=' +
+				loginData.sitename +
+				'&timeout=' +
+				loginData.timeout +
+				'&network=' +
+				loginData.network +
+				'&matrix=' +
+				loginData.matrix +
+				'&version=' +
+				loginData.version;
+			return loginDeeplink;
+		}
+		case Constants.SIGN_X_MATRIX_LOGIN: {
+			const loginData = data as Types.MATRIX_LOGIN_DATA;
 			let loginDeeplink =
 				scheme +
 				'://signx?hash=' +
@@ -61,7 +86,8 @@ export const convertDataToDeeplink = (data: Types.LOGIN_DATA | Types.TRANSACT_DA
 				'&version=' +
 				loginData.version;
 			return loginDeeplink;
-		case Constants.SIGN_X_DATA:
+		}
+		case Constants.SIGN_X_DATA: {
 			const dataPassData = data as Types.DATA_PASS_DATA;
 			let dataDeeplink =
 				scheme +
@@ -84,14 +110,29 @@ export const convertDataToDeeplink = (data: Types.LOGIN_DATA | Types.TRANSACT_DA
 				'&version=' +
 				dataPassData.version;
 			return dataDeeplink;
-		case Constants.SIGN_X_TRANSACT:
+		}
+		case Constants.SIGN_X_TRANSACT: {
 			const transactData = data as Types.TRANSACT_DATA;
-			let transactDeeplink = scheme + '://signx?hash=' + transactData.hash + '&type=' + transactData.type + '&sitename=' + transactData.sitename + '&network=' + transactData.network + '&version=' + transactData.version;
+			let transactDeeplink =
+				scheme +
+				'://signx?hash=' +
+				transactData.hash +
+				'&type=' +
+				transactData.type +
+				'&sitename=' +
+				transactData.sitename +
+				'&network=' +
+				transactData.network +
+				'&version=' +
+				transactData.version;
 			if (transactData.sessionHash) transactDeeplink += '&sessionHash=' + transactData.sessionHash;
 			return transactDeeplink;
-		case Constants.SIGN_X_CLEAN_DEEPLINK:
+		}
+		case Constants.SIGN_X_CLEAN_DEEPLINK: {
 			return scheme + '://signx';
-		default:
+		}
+		default: {
 			throw new Error('Unable to convert data to deeplink - invalid data type');
+		}
 	}
 };
