@@ -51,8 +51,9 @@ export class SignX extends EventEmitter {
 	/**
 	 * Start the login flow, returns login data for client to generate deeplink/QR code
 	 * @param {number} pollingInterval - custom polling interval (optional)
+	 * @param {boolean} matrix - whether to include matrix data in the login request (optional)
 	 */
-	async login(p: { pollingInterval?: number; matrix: boolean }): Promise<Types.LOGIN_DATA> {
+	async login(p: { pollingInterval?: number; matrix?: boolean }): Promise<Types.LOGIN_DATA> {
 		const secureNonce = this.generateRandomHash();
 		const hash = this.generateRandomHash();
 		const secureHash = Encoding.generateSecureHash(hash, secureNonce);
@@ -285,11 +286,11 @@ export class SignX extends EventEmitter {
 		failEvent: string,
 		customPollingInterval?: number,
 	): void {
-		const isLogin = route.includes(Constants.ROUTES.login.fetch);
-		const isMatrixLogin = route.includes(Constants.ROUTES.matrix_login.fetch);
-		const isData = route.includes(Constants.ROUTES.data.response);
-		const isTransactionResponse = route.includes(Constants.ROUTES.transact.response);
-		const isTransactionNext = route.includes(Constants.ROUTES.transact.next);
+		const isLogin = route == Constants.ROUTES.login.fetch;
+		const isMatrixLogin = route == Constants.ROUTES.matrix_login.fetch;
+		const isData = route == Constants.ROUTES.data.response;
+		const isTransactionResponse = route == Constants.ROUTES.transact.response;
+		const isTransactionNext = route == Constants.ROUTES.transact.next;
 		const startTime = Date.now();
 		let finished = false;
 
@@ -323,8 +324,8 @@ export class SignX extends EventEmitter {
 
 					// validate response data with custom errors
 					const data = response.data.data?.data ?? {};
-					if (isLogin && (!data.address || !data.pubKey || !data.did)) throw new Error('Account details missing');
 					if (isMatrixLogin && !data.accessToken) throw new Error('Matrix details missing');
+					if (isLogin && (!data.address || !data.pubKey || !data.did)) throw new Error('Account details missing');
 					if (isData && !response.data.data?.response) throw new Error('Data response missing');
 					if (isTransactionResponse && (data.code != 0 || !data.transactionHash))
 						throw new Error('Transaction failed, no success code');

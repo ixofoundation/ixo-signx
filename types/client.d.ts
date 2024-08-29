@@ -27,10 +27,19 @@ export declare class SignX extends EventEmitter {
     /**
      * Start the login flow, returns login data for client to generate deeplink/QR code
      * @param {number} pollingInterval - custom polling interval (optional)
+     * @param {boolean} matrix - whether to include matrix data in the login request (optional)
      */
     login(p: {
         pollingInterval?: number;
+        matrix?: boolean;
     }): Promise<Types.LOGIN_DATA>;
+    /**
+     * Start the matrix login flow, returns matrix login data for client to generate deeplink/QR code
+     * @param {number} pollingInterval - custom polling interval (optional)
+     */
+    matrixLogin(p: {
+        pollingInterval?: number;
+    }): Promise<Types.MATRIX_LOGIN_DATA>;
     /**
      *
      */
