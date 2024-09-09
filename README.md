@@ -27,6 +27,7 @@ Let us know how we are doing!
   - [💻 Usage](#-usage)
     - [Initialization](#initialization)
     - [Login](#login)
+    - [Matrix Login](#matrix-login)
     - [Data Handling](#data-handling)
     - [Transacting](#transacting)
     - [Event Handling](#event-handling)
@@ -143,6 +144,18 @@ const loginRequest = await signXClient.login({ matrix: true });
 
 Subscribe to login-related events for monitoring the success or failure of the login process. More details on event handling are available [here](#event-handling)
 
+### Matrix Login
+
+To request matrix credentials for the user, use the `matrixLogin` method. This generates necessary data, including a unique hash and secure hash, for QR code generation.
+
+```js
+const matrixLoginRequest = await signXClient.matrixLogin();
+
+// Use matrixLoginRequest data to display a QR code for scanning by the mobile app
+```
+
+Subscribe to matrix login-related events for monitoring the success or failure of the matrix login process. More details on event handling are available [here](#event-handling)
+
 ### Data Handling
 
 The dataPass method is used to create a secure data request on the server. The client encrypts the data, and the mobile app decrypts and processes it.
@@ -225,6 +238,7 @@ signXClient.on(SIGN_X_LOGIN_SUCCESS, (data) => {
 		// Only returned if matrix is specified during login and user has matrix account
 		matrix: {
 			accessToken: "Unique matrix access token",
+			address: "Address of the account linked to matrix credentials",
 			userId: "User's matrix account id",
 			roomId: "User's DID matrix room id",
 		}
@@ -243,7 +257,8 @@ signXClient.on(SIGN_X_LOGIN_SUCCESS, (data) => {
 	message: 'Matrix login request fetched successfully',
 	success: true,
 	data: {
-		accessToken: "Matrix access token",
+		accessToken: "Unique matrix access token",
+		address: "Address of the account linked to matrix credentials",
 		userId: "Matrix user ID",
 		deviceId: "Matrix device ID",
 	},
