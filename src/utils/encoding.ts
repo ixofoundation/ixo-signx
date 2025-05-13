@@ -1,14 +1,22 @@
-import crypto from 'crypto';
-
 import * as Types from '../types/transact';
 import * as Constants from '../constants/signx';
+
+const crypto = globalThis.crypto;
+
+async function sha256Hex(input: string): Promise<string> {
+	const data = new TextEncoder().encode(input);
+	const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+	return Array.from(new Uint8Array(hashBuffer))
+		.map((b) => b.toString(16).padStart(2, '0'))
+		.join('');
+}
 
 /**
  * Generate a sha256 hex encoded hash from the provided data in a fixed format
  * @param data - transaction data to generate hash for (type TRANSACT_HASH)
  * @param fixedSort - whether to sort the keys in the data before hashing (default: true), keep false for backwards compatibility
  */
-export const hashTransactData = (data: Types.TRANSACT_HASH, fixedSort = true): string => {
+export const hashTransactData = async (data: Types.TRANSACT_HASH, fixedSort = true): Promise<string> => {
 	const formattedData = {
 		address: data.address,
 		did: data.did,
@@ -20,7 +28,7 @@ export const hashTransactData = (data: Types.TRANSACT_HASH, fixedSort = true): s
 	// Sort the keys to ensure consistent ordering for the hash
 	const sortedFormattedData = JSON.stringify(formattedData, fixedSort ? Object.keys(formattedData).sort() : null);
 
-	return crypto.createHash('sha256').update(sortedFormattedData).digest('hex');
+	return await sha256Hex(sortedFormattedData);
 };
 
 /**
@@ -28,11 +36,8 @@ export const hashTransactData = (data: Types.TRANSACT_HASH, fixedSort = true): s
  * @param hash - hash to generate secure hash for
  * @param nonce - secure nonce to use in hash generation
  */
-export const generateSecureHash = (hash: string, nonce: string): string => {
-	return crypto
-		.createHash('sha256')
-		.update(hash + nonce)
-		.digest('hex');
+export const generateSecureHash = async (hash: string, nonce: string): Promise<string> => {
+	return await sha256Hex(hash + nonce);
 };
 
 /**

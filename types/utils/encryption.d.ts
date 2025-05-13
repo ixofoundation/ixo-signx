@@ -6,7 +6,7 @@
  * @returns A string containing the encrypted data (base64 encoded)
  * @throws Error if key is invalid or encryption fails
  */
-export declare function encryptJson<T>(jsonData: T, key: string): string;
+export declare function encryptJson<T>(jsonData: T, key: string): Promise<string>;
 /**
  * Decrypts a base64 encoded string containing encrypted JSON data
  *
@@ -15,4 +15,4 @@ export declare function encryptJson<T>(jsonData: T, key: string): string;
  * @returns The decrypted JSON object
  * @throws Error if key is invalid, decryption fails, or data format is corrupt
  */
-export declare function decryptJson<T>(encryptedData: string, key: string): T;
+export declare function decryptJson<T>(encryptedData: string, key: string): Promise<T>;

@@ -1,5 +1,5 @@
 {
-  "name": "@ixo/signx-sdk",
+  "name": "@ixo/signx-sdk-rn",
   "version": "1.2.0",
   "description": "An SDK to manage the login and transaction signing process through Impacts X",
   "author": "ixo",

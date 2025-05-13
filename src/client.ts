@@ -56,7 +56,7 @@ export class SignX extends EventEmitter {
 	async login(p: { pollingInterval?: number; matrix?: boolean }): Promise<Types.LOGIN_DATA> {
 		const secureNonce = this.generateRandomHash();
 		const hash = this.generateRandomHash();
-		const secureHash = Encoding.generateSecureHash(hash, secureNonce);
+		const secureHash = await Encoding.generateSecureHash(hash, secureNonce);
 
 		// start polling for login response
 		this.startPolling(
@@ -87,7 +87,7 @@ export class SignX extends EventEmitter {
 	async matrixLogin(p: { pollingInterval?: number }): Promise<Types.MATRIX_LOGIN_DATA> {
 		const secureNonce = this.generateRandomHash();
 		const hash = this.generateRandomHash();
-		const secureHash = Encoding.generateSecureHash(hash, secureNonce);
+		const secureHash = await Encoding.generateSecureHash(hash, secureNonce);
 
 		// start polling for matrix login response
 		this.startPolling(
@@ -117,10 +117,10 @@ export class SignX extends EventEmitter {
 		const secureNonce = this.generateRandomHash();
 		const hash = this.generateRandomHash();
 		const encryptionKey = this.generateRandomHash();
-		const secureHash = Encoding.generateSecureHash(hash, secureNonce);
+		const secureHash = await Encoding.generateSecureHash(hash, secureNonce);
 
 		// encrypt data
-		const encryptedData = Encryption.encryptJson(p.data, encryptionKey);
+		const encryptedData = await Encryption.encryptJson(p.data, encryptionKey);
 
 		const res = await axios.post(this.endpoint + Constants.ROUTES.data.create, {
 			hash,
@@ -171,8 +171,8 @@ export class SignX extends EventEmitter {
 		// order transactions by sequence and get request data structure
 		let transactions: any[] = data.transactions
 			.sort((a, b) => (a.sequence ?? MAX_TRANSACTIONS) - (b.sequence ?? MAX_TRANSACTIONS))
-			.map((trx, index) => ({
-				hash: Encoding.hashTransactData({
+			.map(async (trx, index) => ({
+				hash: await Encoding.hashTransactData({
 					address: data.address,
 					did: data.did,
 					pubkey: data.pubkey,
@@ -209,7 +209,7 @@ export class SignX extends EventEmitter {
 			this.stopPolling();
 		}
 		this.transactSecureNonce = this.generateRandomHash();
-		this.transactSessionHash = Encoding.generateSecureHash(transactions[0].hash, this.transactSecureNonce);
+		this.transactSessionHash = await Encoding.generateSecureHash(transactions[0].hash, this.transactSecureNonce);
 		this.transactSequence = 1;
 
 		const res = await axios.post(this.endpoint + Constants.ROUTES.transact.create, {
