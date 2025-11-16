@@ -60,10 +60,11 @@ export class SignX extends EventEmitter {
 			document.body.appendChild(iframe);
 
 			// Wait before cleanup
-			await new Promise(resolve => setTimeout(resolve, 300));
-
+			await new Promise(resolve => setTimeout(resolve, 500));
 			// Clean up
 			document.body.removeChild(iframe);
+			// Wait after cleanup
+			await new Promise(resolve => setTimeout(resolve, 500));
 		}
 	}
 
