@@ -24,13 +24,7 @@ export class SignX extends EventEmitter {
 
 	private axiosAbortController = new AbortController();
 
-	constructor(p: {
-		endpoint: string;
-		sitename: string;
-		network: Types.NETWORK;
-		timeout?: number;
-		pollingInterval?: number;
-	}) {
+	constructor(p: { endpoint: string; sitename: string; network: Types.NETWORK; timeout?: number; pollingInterval?: number }) {
 		super();
 		this.endpoint = p.endpoint;
 		this.sitename = p.sitename;
@@ -49,26 +43,28 @@ export class SignX extends EventEmitter {
 	}
 
 	/**
+	 * Open deeplink in browser
+	 * @param {string} deeplink - deeplink URL to open
+	 */
+	private openDeeplink(deeplink: string): void {
+		if (typeof window !== 'undefined') {
+			window.open(deeplink, '_top', 'noopener,noreferrer');
+		}
+	}
+
+	/**
 	 * Start the login flow, returns login data for client to generate deeplink/QR code
 	 * @param {number} pollingInterval - custom polling interval (optional)
 	 * @param {boolean} matrix - whether to include matrix data in the login request (optional)
+	 * @param {boolean} useDeeplink - whether to open deeplink automatically (optional, default false)
 	 */
-	async login(p: { pollingInterval?: number; matrix?: boolean }): Promise<Types.LOGIN_DATA> {
+	async login(p: { pollingInterval?: number; matrix?: boolean; useDeeplink?: boolean }): Promise<Types.LOGIN_DATA> {
 		const secureNonce = this.generateRandomHash();
 		const hash = this.generateRandomHash();
 		const secureHash = Encoding.generateSecureHash(hash, secureNonce);
 
-		// start polling for login response
-		this.startPolling(
-			Constants.ROUTES.login.fetch,
-			{ hash, secureNonce },
-			Constants.SIGN_X_LOGIN_SUCCESS,
-			Constants.SIGN_X_LOGIN_ERROR,
-			p.pollingInterval,
-		);
-
 		// return login data for client to generate deeplink/QR code
-		return {
+		const loginData = {
 			hash,
 			secureHash,
 			type: Constants.SIGN_X_LOGIN,
@@ -78,28 +74,32 @@ export class SignX extends EventEmitter {
 			matrix: p.matrix ?? false,
 			version: Constants.LOGIN_VERSION,
 		};
+
+		// open deeplink if requested
+		if (p.useDeeplink) {
+			const deeplink = Encoding.convertDataToDeeplink(loginData);
+			this.openDeeplink(deeplink);
+			await new Promise(resolve => setTimeout(resolve, 300));
+		}
+
+		// start polling for login response
+		this.startPolling(Constants.ROUTES.login.fetch, { hash, secureNonce }, Constants.SIGN_X_LOGIN_SUCCESS, Constants.SIGN_X_LOGIN_ERROR, p.pollingInterval);
+
+		return loginData;
 	}
 
 	/**
 	 * Start the matrix login flow, returns matrix login data for client to generate deeplink/QR code
 	 * @param {number} pollingInterval - custom polling interval (optional)
+	 * @param {boolean} useDeeplink - whether to open deeplink automatically (optional, default false)
 	 */
-	async matrixLogin(p: { pollingInterval?: number }): Promise<Types.MATRIX_LOGIN_DATA> {
+	async matrixLogin(p: { pollingInterval?: number; useDeeplink?: boolean }): Promise<Types.MATRIX_LOGIN_DATA> {
 		const secureNonce = this.generateRandomHash();
 		const hash = this.generateRandomHash();
 		const secureHash = Encoding.generateSecureHash(hash, secureNonce);
 
-		// start polling for matrix login response
-		this.startPolling(
-			Constants.ROUTES.matrix_login.fetch,
-			{ hash, secureNonce },
-			Constants.SIGN_X_MATRIX_LOGIN_SUCCESS,
-			Constants.SIGN_X_MATRIX_LOGIN_ERROR,
-			p.pollingInterval,
-		);
-
 		// return matrix login data for client to generate deeplink/QR code
-		return {
+		const matrixLoginData = {
 			hash,
 			secureHash,
 			type: Constants.SIGN_X_MATRIX_LOGIN,
@@ -108,12 +108,28 @@ export class SignX extends EventEmitter {
 			network: this.network,
 			version: Constants.MATRIX_VERSION,
 		};
+
+		// open deeplink if requested
+		if (p.useDeeplink) {
+			const deeplink = Encoding.convertDataToDeeplink(matrixLoginData);
+			this.openDeeplink(deeplink);
+			await new Promise(resolve => setTimeout(resolve, 300));
+		}
+
+		// start polling for matrix login response
+		this.startPolling(Constants.ROUTES.matrix_login.fetch, { hash, secureNonce }, Constants.SIGN_X_MATRIX_LOGIN_SUCCESS, Constants.SIGN_X_MATRIX_LOGIN_ERROR, p.pollingInterval);
+
+		return matrixLoginData;
 	}
 
 	/**
-	 *
+	 * Data pass flow
+	 * @param {any} data - data to pass to mobile app
+	 * @param {string} type - type of data
+	 * @param {number} pollingInterval - custom polling interval (optional)
+	 * @param {boolean} useDeeplink - whether to open deeplink automatically (optional, default false)
 	 */
-	async dataPass(p: { data: any; type: string; pollingInterval?: number }): Promise<Types.DATA_PASS_DATA> {
+	async dataPass(p: { data: any; type: string; pollingInterval?: number; useDeeplink?: boolean }): Promise<Types.DATA_PASS_DATA> {
 		const secureNonce = this.generateRandomHash();
 		const hash = this.generateRandomHash();
 		const encryptionKey = this.generateRandomHash();
@@ -130,17 +146,8 @@ export class SignX extends EventEmitter {
 
 		if (!res.data.success) throw new Error(res.data.data?.message || 'Data creation failed');
 
-		// start polling for data response
-		this.startPolling(
-			Constants.ROUTES.data.response,
-			{ hash, secureNonce },
-			Constants.SIGN_X_DATA_SUCCESS,
-			Constants.SIGN_X_DATA_ERROR,
-			p.pollingInterval,
-		);
-
 		// return dataPass data for client to generate deeplink/QR code
-		return {
+		const dataPassData = {
 			hash,
 			secureHash,
 			key: encryptionKey,
@@ -151,6 +158,18 @@ export class SignX extends EventEmitter {
 			network: this.network,
 			version: Constants.DATA_VERSION,
 		};
+
+		// open deeplink if requested
+		if (p.useDeeplink) {
+			const deeplink = Encoding.convertDataToDeeplink(dataPassData);
+			this.openDeeplink(deeplink);
+			await new Promise(resolve => setTimeout(resolve, 300));
+		}
+
+		// start polling for data response
+		this.startPolling(Constants.ROUTES.data.response, { hash, secureNonce }, Constants.SIGN_X_DATA_SUCCESS, Constants.SIGN_X_DATA_ERROR, p.pollingInterval);
+
+		return dataPassData;
 	}
 
 	/**
@@ -160,8 +179,9 @@ export class SignX extends EventEmitter {
 	 * Transactions polling and additions are secure through a secure nonce and session hash, and only the sdk knows the secure nonce that is used to generate the session hash.
 	 * @param data - transaction data (type TRANSACT_DTO)
 	 * @param forceNewSession - force a new session to be created if one is already in progress, default false
+	 * @param useDeeplink - whether to open deeplink automatically (optional, default false)
 	 */
-	async transact(data: Types.TRANSACT_DTO, forceNewSession = false): Promise<Types.TRANSACT_DATA> {
+	async transact(data: Types.TRANSACT_DTO, forceNewSession = false, useDeeplink = false): Promise<Types.TRANSACT_DATA> {
 		// validation
 		if (!data.address || !data.did || !data.pubkey) throw new Error('Account details missing');
 		if (!data.timestamp) throw new Error('Timestamp missing');
@@ -232,11 +252,9 @@ export class SignX extends EventEmitter {
 			sessionHash: this.transactSessionHash,
 			activeTransaction: res.data.data?.activeTransaction,
 		});
-		// start polling for transaction response
-		this.pollTransactionResponse(activeTrxHash);
 
 		// return transact data for client to generate deeplink/QR code
-		return {
+		const transactData = {
 			sessionHash: this.transactSessionHash,
 			hash: transactions[0].hash,
 			type: Constants.SIGN_X_TRANSACT,
@@ -244,6 +262,18 @@ export class SignX extends EventEmitter {
 			network: this.network,
 			version: Constants.TRANSACT_VERSION,
 		};
+
+		// open deeplink if requested
+		if (useDeeplink) {
+			const deeplink = Encoding.convertDataToDeeplink(transactData);
+			this.openDeeplink(deeplink);
+			await new Promise(resolve => setTimeout(resolve, 300));
+		}
+
+		// start polling for transaction response
+		this.pollTransactionResponse(activeTrxHash);
+
+		return transactData;
 	}
 
 	/**
@@ -251,12 +281,7 @@ export class SignX extends EventEmitter {
 	 * @param {string} activeTrxHash - hash of the active transaction to start polling for
 	 */
 	public pollTransactionResponse(activeTrxHash: string) {
-		this.startPolling(
-			Constants.ROUTES.transact.response,
-			{ hash: activeTrxHash, secureNonce: this.transactSecureNonce },
-			Constants.SIGN_X_TRANSACT_SUCCESS,
-			Constants.SIGN_X_TRANSACT_ERROR,
-		);
+		this.startPolling(Constants.ROUTES.transact.response, { hash: activeTrxHash, secureNonce: this.transactSecureNonce }, Constants.SIGN_X_TRANSACT_SUCCESS, Constants.SIGN_X_TRANSACT_ERROR);
 	}
 
 	/**
@@ -279,13 +304,7 @@ export class SignX extends EventEmitter {
 	 * @param {string} failEvent - event to emit on failure
 	 * @param {number} customPollingInterval - custom polling interval
 	 */
-	private startPolling(
-		route: string,
-		body: any,
-		successEvent: string,
-		failEvent: string,
-		customPollingInterval?: number,
-	): void {
+	private startPolling(route: string, body: any, successEvent: string, failEvent: string, customPollingInterval?: number): void {
 		const isLogin = route == Constants.ROUTES.login.fetch;
 		const isMatrixLogin = route == Constants.ROUTES.matrix_login.fetch;
 		const isData = route == Constants.ROUTES.data.response;
@@ -316,8 +335,7 @@ export class SignX extends EventEmitter {
 					finished = true;
 					// if response data contains success property, then check and throw error if false
 					if (!(response.data?.data?.success ?? true)) {
-						let errorMessage =
-							response.data?.data?.data?.message ?? response.data?.data?.message ?? response.data?.data;
+						let errorMessage = response.data?.data?.data?.message ?? response.data?.data?.message ?? response.data?.data;
 						if (isData) errorMessage = response.data?.data?.response;
 						throw new Error(errorMessage);
 					}
@@ -327,8 +345,7 @@ export class SignX extends EventEmitter {
 					if (isMatrixLogin && !data.accessToken) throw new Error('Matrix details missing');
 					if (isLogin && (!data.address || !data.pubKey || !data.did)) throw new Error('Account details missing');
 					if (isData && !response.data.data?.response) throw new Error('Data response missing');
-					if (isTransactionResponse && (data.code != 0 || !data.transactionHash))
-						throw new Error('Transaction failed, no success code');
+					if (isTransactionResponse && (data.code != 0 || !data.transactionHash)) throw new Error('Transaction failed, no success code');
 
 					this.emit(successEvent, response.data.data);
 

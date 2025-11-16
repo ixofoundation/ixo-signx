@@ -25,28 +25,42 @@ export declare class SignX extends EventEmitter {
      */
     generateRandomHash(): string;
     /**
+     * Open deeplink in browser
+     * @param {string} deeplink - deeplink URL to open
+     */
+    private openDeeplink;
+    /**
      * Start the login flow, returns login data for client to generate deeplink/QR code
      * @param {number} pollingInterval - custom polling interval (optional)
      * @param {boolean} matrix - whether to include matrix data in the login request (optional)
+     * @param {boolean} useDeeplink - whether to open deeplink automatically (optional, default false)
      */
     login(p: {
         pollingInterval?: number;
         matrix?: boolean;
+        useDeeplink?: boolean;
     }): Promise<Types.LOGIN_DATA>;
     /**
      * Start the matrix login flow, returns matrix login data for client to generate deeplink/QR code
      * @param {number} pollingInterval - custom polling interval (optional)
+     * @param {boolean} useDeeplink - whether to open deeplink automatically (optional, default false)
      */
     matrixLogin(p: {
         pollingInterval?: number;
+        useDeeplink?: boolean;
     }): Promise<Types.MATRIX_LOGIN_DATA>;
     /**
-     *
+     * Data pass flow
+     * @param {any} data - data to pass to mobile app
+     * @param {string} type - type of data
+     * @param {number} pollingInterval - custom polling interval (optional)
+     * @param {boolean} useDeeplink - whether to open deeplink automatically (optional, default false)
      */
     dataPass(p: {
         data: any;
         type: string;
         pollingInterval?: number;
+        useDeeplink?: boolean;
     }): Promise<Types.DATA_PASS_DATA>;
     /**
      * Create or add transactions to an existing transaction session, if no session exists, a new session is created.
@@ -55,8 +69,9 @@ export declare class SignX extends EventEmitter {
      * Transactions polling and additions are secure through a secure nonce and session hash, and only the sdk knows the secure nonce that is used to generate the session hash.
      * @param data - transaction data (type TRANSACT_DTO)
      * @param forceNewSession - force a new session to be created if one is already in progress, default false
+     * @param useDeeplink - whether to open deeplink automatically (optional, default false)
      */
-    transact(data: Types.TRANSACT_DTO, forceNewSession?: boolean): Promise<Types.TRANSACT_DATA>;
+    transact(data: Types.TRANSACT_DTO, forceNewSession?: boolean, useDeeplink?: boolean): Promise<Types.TRANSACT_DATA>;
     /**
      * Poll for the active transaction response
      * @param {string} activeTrxHash - hash of the active transaction to start polling for
