@@ -46,9 +46,24 @@ export class SignX extends EventEmitter {
 	 * Open deeplink in browser
 	 * @param {string} deeplink - deeplink URL to open
 	 */
-	private openDeeplink(deeplink: string): void {
+	private async openDeeplink(data: any): Promise<void> {
+		console.log('Opening signX deeplink!');
 		if (typeof window !== 'undefined') {
-			window.open(deeplink, '_top', 'noopener,noreferrer');
+			//  const newWindow = window.open(Encoding.convertDataToDeeplink(data), '_top', 'noopener,noreferrer');
+			// 	if (newWindow) newWindow.opener = null;
+			// 	await new Promise(resolve => setTimeout(resolve, 5000));
+
+			// Use hidden iframe approach to avoid cancelling network requests
+			const iframe = document.createElement('iframe');
+			iframe.style.display = 'none';
+			iframe.src = Encoding.convertDataToDeeplink(data);
+			document.body.appendChild(iframe);
+
+			// Wait before cleanup
+			await new Promise(resolve => setTimeout(resolve, 300));
+
+			// Clean up
+			document.body.removeChild(iframe);
 		}
 	}
 
@@ -77,9 +92,7 @@ export class SignX extends EventEmitter {
 
 		// open deeplink if requested
 		if (p.useDeeplink) {
-			const deeplink = Encoding.convertDataToDeeplink(loginData);
-			this.openDeeplink(deeplink);
-			await new Promise(resolve => setTimeout(resolve, 300));
+			await this.openDeeplink(loginData);
 		}
 
 		// start polling for login response
@@ -111,9 +124,7 @@ export class SignX extends EventEmitter {
 
 		// open deeplink if requested
 		if (p.useDeeplink) {
-			const deeplink = Encoding.convertDataToDeeplink(matrixLoginData);
-			this.openDeeplink(deeplink);
-			await new Promise(resolve => setTimeout(resolve, 300));
+			await this.openDeeplink(matrixLoginData);
 		}
 
 		// start polling for matrix login response
@@ -161,9 +172,7 @@ export class SignX extends EventEmitter {
 
 		// open deeplink if requested
 		if (p.useDeeplink) {
-			const deeplink = Encoding.convertDataToDeeplink(dataPassData);
-			this.openDeeplink(deeplink);
-			await new Promise(resolve => setTimeout(resolve, 300));
+			await this.openDeeplink(dataPassData);
 		}
 
 		// start polling for data response
@@ -265,9 +274,7 @@ export class SignX extends EventEmitter {
 
 		// open deeplink if requested
 		if (useDeeplink) {
-			const deeplink = Encoding.convertDataToDeeplink(transactData);
-			this.openDeeplink(deeplink);
-			await new Promise(resolve => setTimeout(resolve, 300));
+			await this.openDeeplink(transactData);
 		}
 
 		// start polling for transaction response
