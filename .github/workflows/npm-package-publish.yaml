@@ -3,6 +3,9 @@
 
 name: Node.js Package
 
+permissions:
+  id-token: write
+
 on:
   push:
     branches: [main]
@@ -47,5 +50,3 @@ jobs:
       - run: yarn install --frozen-lockfile
       - run: yarn build
       - run: yarn publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
